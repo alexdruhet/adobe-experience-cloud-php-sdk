@@ -3,6 +3,8 @@ Adobe Experience Cloud PHP SDK
 
 A php development kit to consume [Adobe Experience Cloud APIs](https://www.adobe.io/apis/experiencecloud.html)
 
+/!\ THIS PROJECT IS AT AN EARLY STAGE AND SHOULD NOT YET BE USED IN PRODUCTION
+
 Requirements
 ---------
 

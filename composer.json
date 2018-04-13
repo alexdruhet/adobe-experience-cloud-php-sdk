@@ -3,6 +3,7 @@
   "description": "An Adobe Marketing Cloud API client implementation",
   "type": "library",
   "license": "MIT",
+  "keywords": ["Adobe", "Experience Cloud", "php"],
   "authors": [
     {
       "name": "Alex Druhet",
@@ -23,6 +24,7 @@
     }
   },
   "require": {
+    "php": ">=5.6",
     "symfony/yaml": "^3.4",
     "guzzlehttp/guzzle": "^6.3",
     "symfony/cache": "^3.4"
