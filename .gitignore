@@ -1,12 +1,12 @@
-# mac OS X
+# System files
 .DS_Store
 
 # IntelliJ project files
 .idea
 
-
+# Working files
 config.yml
 phpunit.xml
-app/ssl/*
-vendor/*
-var/log/*
+app/ssl/
+vendor/
+*.log
