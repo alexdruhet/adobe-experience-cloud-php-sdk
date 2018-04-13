@@ -1,0 +1,16 @@
+parameters:
+
+# Adobe marketing cloud API credentials
+adobe:
+
+    campaign:
+        credentials:
+            private_key: # path to the private key
+            api_key:
+            tech_acct:
+            organization:
+            client_secret:
+            audience:
+            tenant:
+            access_endpoint:
+            exchange_endpoint:

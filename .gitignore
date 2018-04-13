@@ -1,0 +1,12 @@
+# mac OS X
+.DS_Store
+
+# IntelliJ project files
+.idea
+
+
+config.yml
+phpunit.xml
+app/ssl/*
+vendor/*
+var/log/*
