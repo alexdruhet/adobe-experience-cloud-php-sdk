@@ -1,12 +1,10 @@
-Adobe Experience Cloud PHP SDK
-=============================
+# Adobe Experience Cloud PHP SDK [![Build Status](https://travis-ci.org/Pixadelic/adobe-experience-cloud-php-sdk.svg?branch=master)](https://travis-ci.org/Pixadelic/adobe-experience-cloud-php-sdk)
 
 A php development kit to consume [Adobe Experience Cloud APIs](https://www.adobe.io/apis/experiencecloud.html)
 
 /!\ THIS PROJECT IS AT AN EARLY STAGE AND SHOULD NOT YET BE USED IN PRODUCTION
 
-Requirements
----------
+## Requirements
 
 * php >= 5.6
   
@@ -25,34 +23,28 @@ Requirements
   * extension tokenizer
 * composer
 
-Installation
----------
+## Installation
 
 Install dependencies:
 
     $ cd path/to/adobe-experience-cloud-php-sdk/
     $ composer install
 
-
-Unit tests
----------
+## Unit tests
 
 Run PHPUnit :
 
     $ composer exec phpunit -v
 
-Usage
--------
+## Usage
 
 Some examples can be found in the web directory.
 
-Authors
--------
+## Authors
 
 - [Alex Druhet](https://listo.studio)
 
-License
--------
+## License
 
 The MIT License (MIT)
 
