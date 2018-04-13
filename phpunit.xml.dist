@@ -8,9 +8,6 @@
          beStrictAboutTestsThatDoNotTestAnything="true"
          bootstrap="vendor/autoload.php"
 >
-    <php>
-        <env name="CONFIG_PATH" value="app/config/config.yml"/>
-    </php>
     <testsuites>
         <testsuite name="Adobe Experience Cloud PHP SDK Test Suite">
             <directory>tests</directory>
