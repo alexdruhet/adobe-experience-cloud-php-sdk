@@ -1,6 +1,6 @@
 {
-  "name": "pixadelic/adobe-marketing-cloud-php-sdk",
-  "description": "An Adobe Marketing Cloud API client implementation",
+  "name": "pixadelic/adobe-experience-cloud-php-sdk",
+  "description": "An Adobe Experience Cloud API client php implementation",
   "type": "library",
   "license": "MIT",
   "keywords": ["Adobe", "Experience Cloud", "php"],
