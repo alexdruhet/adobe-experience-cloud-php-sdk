@@ -9,7 +9,6 @@
 use PHPUnit\Framework\TestCase;
 use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Exception\AccessTokenException;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class AccessTokenTest
@@ -41,41 +40,16 @@ final class AccessTokenTest extends TestCase
         '_audience' => '',
     ];
 
-    protected static $config;
+    const SUCCESS_RESPONSE = [
+        'token_type' => 'bearer',
+        'access_token' => $_ENV['ACCESS_TOKEN'],
+        'expires_in' => 86399994,
+    ];
 
-    /**
-     * Load config at setup
-     *
-     * @throws \Exception
-     */
-    public static function setUpBeforeClass()
-    {
-        $configPath = __DIR__.'/../../'.$_ENV['CONFIG_PATH'];
-        if (!file_exists($configPath)) {
-            throw new \Exception(sprintf('Configuration file cannot be found at %s', $configPath));
-        }
-        $config = Yaml::parseFile($configPath);
-        if (isset($config['adobe']['campaign']['credentials']['private_key'])) {
-            $privateKeyPath = __DIR__.'/../../'.$config['adobe']['campaign']['credentials']['private_key'];
-            if (!file_exists($privateKeyPath)) {
-                throw new \Exception(sprintf('Private key cannot be found at %s', $privateKeyPath));
-            }
-            $config['adobe']['campaign']['credentials']['private_key'] = $privateKeyPath;
-        }
-        self::$config = $config['adobe']['campaign']['credentials'];
-    }
-
-    /**
-     * Test config size briefly
-     */
-    public function testRequiredConfig()
-    {
-        foreach (self::REQUIRED_CONFIG as $key => $type) {
-            $this->assertArrayHasKey($key, self::$config);
-            $this->assertInternalType($type, self::$config[$key]);
-        }
-
-    }
+    const ERROR_RESPONSE = [
+        'error' => true,
+        'error_message' => 'Expected error message',
+    ];
 
     /**
      * Test AccessToken construction
@@ -87,24 +61,21 @@ final class AccessTokenTest extends TestCase
     {
         $classname = 'Pixadelic\Adobe\Api\AccessToken';
 
-        // @url http://miljar.github.io/blog/2013/12/20/phpunit-testing-the-constructor/
         // Get mock, without the constructor being called
         $mock = $this->getMockBuilder($classname)
             ->disableOriginalConstructor()
             ->setMethods(array('setConfig'))
             ->getMock();
 
-        // set expectations for constructor calls
+        // Set expectations for constructor calls
         $mock->expects($this->once())
             ->method('setConfig')
-            ->with(
-                $this->equalTo(self::$config)
-            );
+            ->with($this->equalTo(self::REQUIRED_CONFIG));
 
-        // now call the constructor, applying expectations
+        // Now call the constructor, applying expectations
         $reflectedClass = new ReflectionClass($classname);
         $constructor = $reflectedClass->getConstructor();
-        $constructor->invoke($mock, self::$config);
+        $constructor->invoke($mock, self::REQUIRED_CONFIG);
 
     }
 
@@ -121,86 +92,30 @@ final class AccessTokenTest extends TestCase
 
     /**
      * Test retrieved attributes and types
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function testGet()
     {
-        $accessToken = new AccessToken(self::$config);
-        $response = $accessToken->get();
+        // Creating stubbed request
+        $stub = $this->createMock(AccessToken::class);
+
+        // Setting stub
+        $stub->method('get')
+            ->willReturn((object) self::SUCCESS_RESPONSE);
+
+        // Getting stubbed data
+        $response = $stub->get();
+
+        // Applying assertions
         $this->assertObjectHasAttribute('token_type', $response);
         $this->assertEquals('bearer', $response->token_type);
         $this->assertObjectHasAttribute('access_token', $response);
         $this->assertInternalType('string', $response->access_token);
         $this->assertObjectHasAttribute('expires_in', $response);
         $this->assertInternalType('int', $response->expires_in);
-    }
-
-    /**
-     * Test the expiration setting
-     */
-    public function testSetExpiration()
-    {
-        // The expiration setting seems to be ignored by the JWT exchange endpoint
-        // so we skip this for the moment.
-        $this->markTestSkipped(
-            'The expiration setting seems to be ignored by the JWT exchange endpoint'
-        );
-
-        $expiration = 5;
-        $accessToken = new AccessToken(self::$config);
-        $accessToken->setExpiration($expiration);
-        $response = $accessToken->get();
-        $this->assertObjectHasAttribute('token_type', $response);
-        $this->assertEquals('bearer', $response->token_type);
-        $this->assertObjectHasAttribute('access_token', $response);
-        $this->assertInternalType('string', $response->access_token);
-        $this->assertObjectHasAttribute('expires_in', $response);
-        $this->assertInternalType('int', $response->expires_in);
-        $this->assertLessThanOrEqual($expiration, $response->expires_in);
-    }
-
-    /**
-     * Test that disabling cache hit the curl request
-     */
-    public function testDisableCache()
-    {
-        $accessToken = new AccessToken(self::$config);
-        $response = $accessToken->get(true);
-        $this->assertObjectHasAttribute('token_type', $response);
-        $this->assertEquals('bearer', $response->token_type);
-        $this->assertObjectHasAttribute('access_token', $response);
-        $this->assertInternalType('string', $response->access_token);
-        $this->assertObjectHasAttribute('expires_in', $response);
-        $this->assertInternalType('int', $response->expires_in);
-
-
-        $classname = 'Pixadelic\Adobe\Api\AccessToken';
-
-        // @url http://miljar.github.io/blog/2013/12/20/phpunit-testing-the-constructor/
-        // Get mock, without the constructor being called
-        $mock = $this->getMockBuilder($classname)
-            ->disableOriginalConstructor()
-            ->setMethods(array('setConfig'))
-            ->getMock();
-
-        // set expectations for constructor calls
-        $mock->expects($this->once())
-            ->method('setConfig')
-            ->with(
-                $this->equalTo(self::$config)
-            );
-
-        // now call the constructor, applying expectations
-        $reflectedClass = new ReflectionClass($classname);
-        $constructor = $reflectedClass->getConstructor();
-        $constructor->invoke($mock, self::$config);
-    }
-
-    /**
-     * Close operation
-     */
-    public static function tearDownAfterClass()
-    {
-        self::$config = null;
     }
 
 }

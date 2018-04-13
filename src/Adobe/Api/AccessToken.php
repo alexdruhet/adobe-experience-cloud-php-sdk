@@ -207,7 +207,8 @@ class AccessToken
      *
      * @param bool $force bypass caching or not, default not
      *
-     * @return mixed|null
+     * @return mixed|null|\Psr\Http\Message\StreamInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
@@ -226,36 +227,33 @@ class AccessToken
             'jwt_token' => $jwt,
         ];
 
-        // Query processing
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->exchangeEndpoint);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        $response = json_decode(curl_exec($ch));
-        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // Send request
+        $request = new Request('POST', $this->exchangeEndpoint, $payload);
+        $response = $request->send();
+        $status = $response->getStatusCode();
+        $body = $response->getBody();
+        $content = json_decode($body->getContents());
 
         // Error handling
         if ($status !== 200) {
             $message = self::ERROR_MESSAGES['get'];
-            if (isset($this->error)) {
-                $message = $this->error.\PHP_EOL.$this->error_description;
+            if (isset($content->error)) {
+                $message = $content->error.\PHP_EOL.$content->error_description;
             }
             throw new AccessTokenException($message);
         }
 
         // Add debug info to response if necessary
         if ($this->debug) {
-            $response->debug = $this->debugInfo;
+            $content->debug = $this->debugInfo;
         }
 
         // Caching response
         if ($this->enableCache) {
-            $this->cache->set($this->cacheId, $response, $response->expires_in);
+            $this->cache->set($this->cacheId, $content, $content->expires_in);
         }
 
-        return $response;
+        return $content;
     }
 
     /**
