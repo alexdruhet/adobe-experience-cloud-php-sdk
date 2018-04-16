@@ -7,7 +7,6 @@
  */
 
 $appRoot = __DIR__.'/..';
-
 ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 
@@ -15,6 +14,9 @@ use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\Campaign;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Load and prepare config
+ */
 $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
 if (isset ($config['adobe']['campaign']['credentials']['private_key'])) {
     $config['adobe']['campaign']['credentials']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['credentials']['private_key'];
