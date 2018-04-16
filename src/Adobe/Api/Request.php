@@ -25,10 +25,13 @@ class Request
     /**
      * Request constructor.
      *
-     * @param $method
-     * @param $url
+     * @param        $method
+     * @param        $url
+     * @param null   $body
+     * @param array  $headers
+     * @param string $baseUri
      */
-    public function __construct($method, $url, $body = null)
+    public function __construct($method, $url, $body = null, $headers = [], $baseUri = '')
     {
         $this->method = $method;
         $this->url = $url;
@@ -38,6 +41,12 @@ class Request
             } else {
                 $this->options['body'] = $body;
             }
+        }
+        if (count($headers)) {
+            $this->options['headers'] = $headers;
+        }
+        if ($baseUri) {
+            $this->options['base_uri'] = $baseUri;
         }
         $this->client = new Client();
 

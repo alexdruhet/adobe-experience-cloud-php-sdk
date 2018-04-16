@@ -12,6 +12,11 @@ namespace Pixadelic\Adobe\Api;
 use Pixadelic\Adobe\Exception\AccessTokenException;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 
+/**
+ * Class AccessToken
+ *
+ * @package Pixadelic\Adobe\Api
+ */
 class AccessToken
 {
     /**
@@ -66,7 +71,9 @@ class AccessToken
     protected $clientSecret;
 
     /**
-     * Tenant WTF?
+     * Tenant
+     *
+     * The customer api instance to work with
      *
      * @var string
      */
@@ -131,6 +138,23 @@ class AccessToken
     protected $debugInfo;
 
     /**
+     * Decides whether we are running
+     * our calls against production
+     * or staging instance.
+     *
+     * Default to staging.
+     *
+     * @var bool
+     */
+    protected $staging = true;
+
+    /**
+     * @var string
+     */
+    protected $stagingSuffix = '-mkt-stage1';
+
+
+    /**
      * AccessToken constructor.
      *
      * @param array $config
@@ -176,12 +200,30 @@ class AccessToken
             if (isset($config['cache'])) {
                 $this->enableCache = (bool) $config['cache'];
             }
+            if (isset($config['staging'])) {
+                $this->staging = (bool) $config['staging'];
+            }
+            if ($this->staging) {
+                $this->tenant .= $this->stagingSuffix;
+            }
             if (isset($config['debug'])) {
                 $this->debug = (bool) $config['debug'];
             }
         } catch (\Exception $exception) {
             throw new AccessTokenException($exception->getMessage());
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getTenant()
+    {
+//        if ($this->staging) {
+//            return "{$this->tenant}{$this->stagingSuffix}";
+//        }
+
+        return $this->tenant;
     }
 
     /**
