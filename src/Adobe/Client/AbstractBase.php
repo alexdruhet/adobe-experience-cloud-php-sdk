@@ -13,11 +13,11 @@ use Pixadelic\Adobe\Api\Request;
 use Pixadelic\Adobe\Exception\ClientException;
 
 /**
- * Class AbstractClient
+ * Class AbstractBase
  *
  * @package Pixadelic\Adobe\Client
  */
-abstract class AbstractClient
+abstract class AbstractBase
 {
     /**
      * @var array
@@ -48,7 +48,7 @@ abstract class AbstractClient
     protected $tenant;
 
     /**
-     * AbstractClient constructor.
+     * AbstractBase constructor.
      *
      * @param array $config
      */
@@ -107,6 +107,14 @@ abstract class AbstractClient
         ];
     }
 
+    /**
+     * @param $resource
+     *
+     * @return string
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function getMetadata($resource)
     {
         if (!$this->metadata) {
@@ -123,6 +131,9 @@ abstract class AbstractClient
 
     }
 
+    /**
+     * @return string
+     */
     protected function getBaseUri()
     {
         return "{$this->baseUri}/{$this->tenant}/{$this->namespace}/";

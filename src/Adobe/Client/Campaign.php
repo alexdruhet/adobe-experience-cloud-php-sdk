@@ -9,7 +9,7 @@
 namespace Pixadelic\Adobe\Client;
 
 
-class Campaign extends AbstractClient
+class Campaign extends AbstractBase
 {
     protected function setNamespace()
     {
