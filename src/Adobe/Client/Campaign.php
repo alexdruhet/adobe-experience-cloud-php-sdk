@@ -9,7 +9,10 @@
 namespace Pixadelic\Adobe\Client;
 
 
-class Campaign
+class Campaign extends AbstractClient
 {
-
+    protected function setNamespace()
+    {
+        $this->namespace = 'campaign/profileAndServices';
+    }
 }
