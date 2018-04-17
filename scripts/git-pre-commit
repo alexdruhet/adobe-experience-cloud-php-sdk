@@ -45,7 +45,7 @@ then
     echo -e "${NOTICE_COLOR}2. Running Code Sniffer...${DEFAULT_COLOR}"
     echo " "
 
-	$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/SymfonyRequirements.php
+	$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/*.php
 
 
 	if [ $? != 0 ]
@@ -63,7 +63,7 @@ then
         echo -e "${NOTICE_COLOR}3. Running Code Sniffer again...${DEFAULT_COLOR}"
         echo " "
 
-		$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/SymfonyRequirements.php
+		$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/*.php
 
 		if [ $? != 0 ]
 		then
