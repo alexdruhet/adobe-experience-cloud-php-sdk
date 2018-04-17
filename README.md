@@ -16,6 +16,7 @@ A php development kit to consume [Adobe Experience Cloud APIs](https://www.adobe
   * extension reflection
   * extension spl+
   * extension openssl
+  * phpcs
 
   **Optional (to run code coverage)**
   
