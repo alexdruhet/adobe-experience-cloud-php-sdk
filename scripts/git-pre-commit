@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+DEFAULT_COLOR='\033[0m'
+SUCCESS_COLOR='\033[32m'
+NOTICE_COLOR='\033[33m'
+ERROR_COLOR='\033[31m'
+
+PROJECT=`git rev-parse --show-toplevel`
+STAGED_FILES_CMD=`git diff --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.php`
+
+echo " "
+echo -e "${NOTICE_COLOR}Running commit validation${DEFAULT_COLOR}"
+echo " "
+
+if [ "$#" -eq 1 ]
+then
+	oIFS=$IFS
+	IFS='
+	'
+	SFILES="$1"
+	IFS=$oIFS
+fi
+SFILES=${SFILES:-$STAGED_FILES_CMD}
+
+echo " "
+echo -e "${NOTICE_COLOR}1. Checking PHP Lint...${DEFAULT_COLOR}"
+echo " "
+
+for FILE in $SFILES
+do
+
+	php -l -d display_errors=0 $PROJECT/$FILE
+	if [ $? != 0 ]
+	then
+		echo -e "${NOTICE_COLOR}Fix the error before commit.${DEFAULT_COLOR}"
+		exit 1
+	fi
+	FILES="$FILES $PROJECT/$FILE"
+done
+
+if [ "$FILES" != "" ]
+then
+
+	echo " "
+    echo -e "${NOTICE_COLOR}2. Running Code Sniffer...${DEFAULT_COLOR}"
+    echo " "
+
+	$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/SymfonyRequirements.php
+
+
+	if [ $? != 0 ]
+	then
+
+	    echo " "
+        echo -e "${ERROR_COLOR}Coding standards errors have been detected. Running phpcbf...${DEFAULT_COLOR}"
+        echo " "
+
+		$PROJECT/vendor/bin/phpcbf --encoding=utf-8 --tab-width=4 --standard=Symfony2 -w $FILES
+
+		git add $FILES
+
+		echo " "
+        echo -e "${NOTICE_COLOR}3. Running Code Sniffer again...${DEFAULT_COLOR}"
+        echo " "
+
+		$PROJECT/vendor/bin/phpcs --encoding=utf-8 -w -p --tab-width=4 --standard=Symfony2 $FILES --ignore=var/SymfonyRequirements.php
+
+		if [ $? != 0 ]
+		then
+
+			echo " "
+            echo -e "${ERROR_COLOR}Errors found not fixable automatically.\nPlease fix them before commit.${DEFAULT_COLOR}"
+            echo " "
+
+			exit 1
+		fi
+	fi
+fi
+
+echo " "
+echo -e "${SUCCESS_COLOR}Your commit is valid!${DEFAULT_COLOR}"
+echo " "
+
+exit $?
