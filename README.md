@@ -16,7 +16,6 @@ A php development kit to consume [Adobe Experience Cloud APIs](https://www.adobe
   * extension reflection
   * extension spl+
   * extension openssl
-  * phpcs
 
   **Optional (to run code coverage)**
   
@@ -31,11 +30,21 @@ Install dependencies:
     $ cd path/to/adobe-experience-cloud-php-sdk/
     $ composer install
 
+Note that PHPCS will be installed and configured to apply Symfony2 coding standards.
+
 ## Unit tests
 
 Run PHPUnit :
 
+    $ composer run test
+
+or
+
     $ composer exec phpunit -v
+
+or
+
+    $ ./vendor/bin/phpunit
 
 ## Usage
 

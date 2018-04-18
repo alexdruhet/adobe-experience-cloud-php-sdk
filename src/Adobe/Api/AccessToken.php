@@ -8,17 +8,16 @@
 
 namespace Pixadelic\Adobe\Api;
 
-
 use Pixadelic\Adobe\Exception\AccessTokenException;
-use Symfony\Component\Cache\Simple\FilesystemCache;
+use Pixadelic\Adobe\Traits\CommonTrait;
 
 /**
  * Class AccessToken
- *
- * @package Pixadelic\Adobe\Api
  */
 class AccessToken
 {
+    use CommonTrait;
+
     /**
      * Error messages
      */
@@ -103,58 +102,6 @@ class AccessToken
     protected $exchangeEndpoint;
 
     /**
-     * Expiration delay
-     * in seconds.
-     *
-     * 24h as default
-     *
-     * @var int
-     */
-    protected $expiration = 3600 * 24;
-
-    /**
-     * @var bool
-     */
-    protected $enableCache = true;
-
-    /**
-     * @var \Symfony\Component\Cache\Simple\FilesystemCache
-     */
-    protected $cache;
-
-    /**
-     * @var string
-     */
-    protected $cacheId = 'aec.access_token';
-
-    /**
-     * @var bool
-     */
-    protected $debug = false;
-
-    /**
-     * @var \stdClass
-     */
-    protected $debugInfo;
-
-    /**
-     * Decides whether we are running
-     * our calls against production
-     * or staging instance.
-     *
-     * Default to staging.
-     *
-     * @var bool
-     */
-    protected $staging = true;
-
-    /**
-     * @var string
-     */
-    protected $stagingSuffix = '-mkt-stage1';
-
-
-    /**
      * AccessToken constructor.
      *
      * @param array $config
@@ -165,13 +112,76 @@ class AccessToken
     {
         $this->setConfig($config);
 
-        if ($this->enableCache) {
-            $this->cache = new FilesystemCache();
+        $this
+            ->initDebug()
+            ->initCache();
+
+        $this->addDebugInfo('config', $config);
+    }
+
+    /**
+     * @return string
+     */
+    public function getTenant()
+    {
+        return $this->tenant;
+    }
+
+    /**
+     * Return an access token
+     *
+     * @param bool $force bypass caching or not, default not
+     *
+     * @return mixed|null|\Psr\Http\Message\StreamInterface
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function get($force = false)
+    {
+        // Retrieve from cache if possible
+        if (!$force && $this->hasCache()) {
+            return $this->getCache();
         }
+
+        // Prepare request payload
+        $jwt = $this->generateJwt();
+        $payload = [
+            'client_id' => $this->apiKey,
+            'client_secret' => $this->clientSecret,
+            'jwt_token' => $jwt,
+        ];
+
+        // Send request
+        $request = new Request('POST', $this->exchangeEndpoint, $payload);
+        $response = $request->send();
+        $status = $response->getStatusCode();
+        $body = $response->getBody();
+        $content = json_decode($body->getContents());
+
+        // Error handling
+        if (200 !== $status) {
+            $message = self::ERROR_MESSAGES['get'];
+            if (isset($content->error)) {
+                // @codingStandardsIgnoreStart
+                $message = $content->error.\PHP_EOL.$content->error_description;
+                // @codingStandardsIgnoreEnd
+            }
+            throw new AccessTokenException($message);
+        }
+
+        // Add debug info to response if necessary
         if ($this->debug) {
-            $this->debugInfo = new \stdClass();
-            $this->debugInfo->config = $config;
+            $content->debug = $this->debugInfo;
         }
+
+        // Caching response
+        // @codingStandardsIgnoreStart
+        $this->setCache($content, $content->expires_in);
+        // @codingStandardsIgnoreEnd
+
+        return $content;
     }
 
     /**
@@ -215,93 +225,10 @@ class AccessToken
     }
 
     /**
-     * @return string
-     */
-    public function getTenant()
-    {
-//        if ($this->staging) {
-//            return "{$this->tenant}{$this->stagingSuffix}";
-//        }
-
-        return $this->tenant;
-    }
-
-    /**
-     * Set expiration delay
-     *
-     * @param integer $seconds The expiration delay expressed in seconds
-     *
-     * @throws \Pixadelic\Adobe\Exception\AccessTokenException
-     */
-    public function setExpiration($seconds)
-    {
-        if (!\is_int($seconds)) {
-            throw new AccessTokenException(self::ERROR_MESSAGES['setExpiration']);
-        }
-        if ($this->enableCache && $this->cache->has($this->cacheId)) {
-            $this->cache->delete($this->cacheId);
-        }
-        $this->expiration = $seconds;
-    }
-
-    /**
-     * Return an access token
-     *
-     * @param bool $force bypass caching or not, default not
-     *
-     * @return mixed|null|\Psr\Http\Message\StreamInterface
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\AccessTokenException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
-     */
-    public function get($force = false)
-    {
-        // Retrieve from cache if possible
-        if (!$force && $this->enableCache && $this->cache->has($this->cacheId)) {
-            return $this->cache->get($this->cacheId);
-        }
-
-        // Prepare request payload
-        $jwt = $this->generateJwt();
-        $payload = [
-            'client_id' => $this->apiKey,
-            'client_secret' => $this->clientSecret,
-            'jwt_token' => $jwt,
-        ];
-
-        // Send request
-        $request = new Request('POST', $this->exchangeEndpoint, $payload);
-        $response = $request->send();
-        $status = $response->getStatusCode();
-        $body = $response->getBody();
-        $content = json_decode($body->getContents());
-
-        // Error handling
-        if ($status !== 200) {
-            $message = self::ERROR_MESSAGES['get'];
-            if (isset($content->error)) {
-                $message = $content->error.\PHP_EOL.$content->error_description;
-            }
-            throw new AccessTokenException($message);
-        }
-
-        // Add debug info to response if necessary
-        if ($this->debug) {
-            $content->debug = $this->debugInfo;
-        }
-
-        // Caching response
-        if ($this->enableCache) {
-            $this->cache->set($this->cacheId, $content, $content->expires_in);
-        }
-
-        return $content;
-    }
-
-    /**
      * Generate a JWT
      *
      * @return string
+     *
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
      */
     private function generateJwt()
@@ -333,13 +260,12 @@ class AccessToken
             str_replace($find, $replace, base64_encode(json_encode($header))),
             str_replace($find, $replace, base64_encode(json_encode($payload))),
         );
-        $signing_input = implode('.', $segments);
+        $signingInput = implode('.', $segments);
 
         // Generate signature
-        @openssl_sign($signing_input, $signature, $privateKey, 'sha256');
+        @openssl_sign($signingInput, $signature, $privateKey, 'sha256');
         $segments[] = str_replace($find, $replace, base64_encode($signature));
 
         return implode('.', $segments);
     }
-
 }

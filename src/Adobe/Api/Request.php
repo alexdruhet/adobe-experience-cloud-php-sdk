@@ -12,8 +12,6 @@ use GuzzleHttp\Client;
 
 /**
  * Class Request
- *
- * @package Pixadelic\Adobe\Api
  */
 class Request
 {
@@ -25,8 +23,8 @@ class Request
     /**
      * Request constructor.
      *
-     * @param        $method
-     * @param        $url
+     * @param string $method
+     * @param string $url
      * @param null   $body
      * @param array  $headers
      * @param string $baseUri
@@ -49,15 +47,31 @@ class Request
             $this->options['base_uri'] = $baseUri;
         }
         $this->client = new Client();
-
     }
 
     /**
      * @return mixed|\Psr\Http\Message\ResponseInterface
+     *
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function send()
     {
         return $this->client->request($this->method, $this->url, $this->options);
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @return array|mixed|null
+     */
+    public function getConfig()
+    {
+        return $this->client->getConfig();
     }
 }
