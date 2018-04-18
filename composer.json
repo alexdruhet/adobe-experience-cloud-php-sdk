@@ -3,7 +3,11 @@
   "description": "An Adobe Experience Cloud API client php implementation",
   "type": "library",
   "license": "MIT",
-  "keywords": ["Adobe", "Experience Cloud", "php"],
+  "keywords": [
+    "Adobe",
+    "Experience Cloud",
+    "php"
+  ],
   "authors": [
     {
       "name": "Alex Druhet",
@@ -32,5 +36,17 @@
   "require-dev": {
     "phpunit/phpunit": "^5",
     "squizlabs/php_codesniffer": "^3.2"
+  },
+  "scripts": {
+    "aec-php-sdk-scripts": [
+      "./scripts/install.sh"
+    ],
+    "post-install-cmd": [
+      "@aec-php-sdk-scripts"
+    ],
+    "post-update-cmd": [
+      "@aec-php-sdk-scripts"
+    ],
+    "test": "composer exec phpunit -v"
   }
 }

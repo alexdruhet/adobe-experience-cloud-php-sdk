@@ -11,27 +11,28 @@ ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 
 use Pixadelic\Adobe\Api\AccessToken;
-use Pixadelic\Adobe\Client\Campaign;
 use Symfony\Component\Yaml\Yaml;
+
+//use Pixadelic\Adobe\Client\CampaignStandard;
 
 /**
  * Load and prepare config
  */
 $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
-if (isset ($config['adobe']['campaign']['credentials']['private_key'])) {
+if (isset($config['adobe']['campaign']['credentials']['private_key'])) {
     $config['adobe']['campaign']['credentials']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['credentials']['private_key'];
 }
 
 /**
  * Getting access token
  */
-//$accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
-//echo var_dump($accessToken->get(true));
-
+$accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
+//$accessToken->flush();
+echo var_dump($accessToken->get());
 
 /**
- * Campaign client example
+ * CampaignStandard client example
  */
-$campaignClient = new Campaign($config['adobe']['campaign']['credentials']);
-$profileMetadata = $campaignClient->getMetadata('profile');
-var_dump($profileMetadata);
+//$campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
+//$profileMetadata = $campaignClient->getMetadata('profile');
+//var_dump($profileMetadata);
