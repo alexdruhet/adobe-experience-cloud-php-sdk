@@ -181,9 +181,6 @@ trait CommonTrait
             $this->cacheId = "aec.{$hash}";
             $this->addDebugInfo('className', $hash);
             $this->addDebugInfo('cacheId', $this->cacheId);
-            //if ($this->debug) {
-            //    $this->flush();
-            //}
         }
 
         return $this;

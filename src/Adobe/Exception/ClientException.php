@@ -8,7 +8,10 @@
 
 namespace Pixadelic\Adobe\Exception;
 
-
+/**
+ * Class ClientException
+ *
+ */
 class ClientException extends \Exception
 {
 

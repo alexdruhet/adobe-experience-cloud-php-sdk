@@ -8,7 +8,10 @@
 
 namespace Pixadelic\Adobe\Exception;
 
-
+/**
+ * Class AccessTokenException
+ *
+ */
 class AccessTokenException extends \Exception
 {
 

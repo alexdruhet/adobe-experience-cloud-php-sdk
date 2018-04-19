@@ -148,9 +148,11 @@ class AccessToken
         // Prepare request payload
         $jwt = $this->generateJwt();
         $payload = [
-            'client_id' => $this->apiKey,
-            'client_secret' => $this->clientSecret,
-            'jwt_token' => $jwt,
+            'form_params' => [
+                'client_id' => $this->apiKey,
+                'client_secret' => $this->clientSecret,
+                'jwt_token' => $jwt,
+            ],
         ];
 
         // Send request
@@ -179,6 +181,7 @@ class AccessToken
         // Caching response
         // @codingStandardsIgnoreStart
         $this->setCache($content, $content->expires_in);
+
         // @codingStandardsIgnoreEnd
 
         return $content;
