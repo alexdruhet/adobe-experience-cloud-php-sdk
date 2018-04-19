@@ -35,7 +35,7 @@ class Request
         $this->url = $url;
         if ($body) {
             if (\is_array($body)) {
-                $this->options['form_params'] = $body;
+                $this->options = $body;
             } else {
                 $this->options['body'] = $body;
             }

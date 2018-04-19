@@ -6,6 +6,8 @@
  * Time: 15:49
  */
 
+namespace Pixadelic\Adobe\Tests\Api;
+
 use PHPUnit\Framework\TestCase;
 use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Exception\AccessTokenException;
@@ -73,10 +75,9 @@ final class AccessTokenTest extends TestCase
             ->with($this->equalTo(self::REQUIRED_CONFIG));
 
         // Now call the constructor, applying expectations
-        $reflectedClass = new ReflectionClass($classname);
+        $reflectedClass = new \ReflectionClass($classname);
         $constructor = $reflectedClass->getConstructor();
         $constructor->invoke($mock, self::REQUIRED_CONFIG);
-
     }
 
     /**
@@ -117,6 +118,4 @@ final class AccessTokenTest extends TestCase
         $this->assertObjectHasAttribute('expires_in', $response);
         $this->assertInternalType('int', $response->expires_in);
     }
-
 }
-

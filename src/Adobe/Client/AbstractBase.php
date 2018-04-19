@@ -104,25 +104,7 @@ abstract class AbstractBase
             ->initCache()
             ->initDebug();
         $this->setEndpoints();
-    }
-
-    /**
-     * @param string $resource
-     *
-     * @return string
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
-     */
-    public function getMetadata($resource)
-    {
-        if (!isset($this->metadata[$resource])) {
-            $url = sprintf('resourceType/%s', $resource);
-            $this->metadatas[$resource] = $this->fetch('GET', $url);
-        }
-
-        return $this->metadatas[$resource];
+        $this->setMajorEndpoints();
     }
 
     /**
@@ -134,17 +116,66 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getResources($resource)
+    public function getMetadata($resource)
     {
-        if (!isset($this->resource[$resource])) {
+        $index = $this->getCurrentEndpointIndex().'/'.$resource;
+        if (!isset($this->metadata[$index])) {
             $url = sprintf('resourceType/%s', $resource);
-            $this->resources[$resource] = $this->fetch('GET', $url);
+            $this->metadatas[$index] = $this->get($url);
         }
 
-        return $this->resources[$resource];
+        return $this->metadatas[$index];
+    }
+
+    ///**
+    // * Get json resource representation as described in Adobe documentation.
+    // * Actually the endpoint api does not match with the documentation, so we can't use it yet.
+    // *
+    // * @see https://docs.campaign.adobe.com/doc/standard/en/api/ACS_API.html#resources-representation
+    // *
+    // * @param string $resource
+    // *
+    // * @return mixed
+    // *
+    // * @throws \GuzzleHttp\Exception\GuzzleException
+    // * @throws \Pixadelic\Adobe\Exception\ClientException
+    // * @throws \Psr\SimpleCache\InvalidArgumentException
+    // */
+    //public function getResource($resource)
+    //{
+    //    $index = $this->getCurrentEndpointIndex().'/'.$resource;
+    //    if (!isset($this->resource[$index])) {
+    //        $this->validateResource($resource);
+    //        $resourceName = \ucfirst($resource);
+    //        $this->resources[$index] = $this->get("{$this->majorEndpoints[$this->currentMajorEndpointIndex]}.json", ['_lineCount' => 1]);
+    //    }
+//
+    //    return $this->resources[$index];
+    //}
+
+    /**
+     * Get next page of a results set
+     *
+     * @param \stdClass $response
+     *
+     * @return bool|mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getNext(\stdClass $response)
+    {
+        if (\property_exists($response, 'next') && \property_exists($response->next, 'href')) {
+            return $this->get($response->next->href);
+        }
+
+        return false;
     }
 
     /**
+     * Retrieve endpoints
+     *
      * @return array
      */
     public function getEndpoints()
@@ -153,6 +184,8 @@ abstract class AbstractBase
     }
 
     /**
+     * Retrieve major endpoints
+     *
      * @return array
      */
     public function getMajorEndpoints()
@@ -234,17 +267,68 @@ abstract class AbstractBase
     }
 
     /**
-     * @param string $method
-     * @param string $url
-     * @param null   $body
+     * Retrieve full endpoints uri
      *
      * @return string
+     */
+    protected function getCurrentEndpointIndex()
+    {
+        return "{$this->endpoints[$this->currentEndpointIndex]}/{$this->majorEndpoints[$this->currentMajorEndpointIndex]}";
+    }
+
+    /**
+     * Test if a single resource is
+     * known by the current endpoint
+     *
+     * @param string $resource
+     * @param null   $value
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function fetch($method, $url, $body = null)
+    protected function validateResource($resource, $value = null)
+    {
+        $metadata = $this->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
+        if (!\property_exists($metadata->content, $resource)) {
+            throw new ClientException("{$resource} does not exists");
+        }
+        if ($value && \property_exists($metadata->content->{$resource}, 'values') && !\property_exists($metadata->content->{$resource}->values, $value)) {
+            throw new ClientException("{$value} is not a valid value for {$resource}");
+        }
+    }
+
+    /**
+     * Test if an array of resources
+     * is known by the current endpoint
+     *
+     * @param array $resources
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function validateResources(array $resources)
+    {
+        foreach ($resources as $resource => $value) {
+            $this->validateResource($resource, $value);
+        }
+    }
+
+    /**
+     * Send request with valid authorization headers
+     *
+     * @param string $method
+     * @param string $url
+     * @param null   $body
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function doRequest($method, $url, $body = null)
     {
         try {
             $headers = $this->getHeaders();
@@ -262,5 +346,77 @@ abstract class AbstractBase
         }
 
         return \json_decode($response->getBody()->getContents());
+    }
+
+    /**
+     * GET request wrapper
+     *
+     * @param string $url
+     * @param array  $parameters
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function get($url, array $parameters = [])
+    {
+        return $this->doRequest('GET', $url, ['query' => $parameters]);
+    }
+
+    /**
+     * POST request wrapper
+     *
+     * @param string $url
+     * @param array  $payload
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function post($url, array $payload)
+    {
+        $this->validateResources($payload);
+
+        return $this->doRequest('POST', $url, \json_encode($payload));
+    }
+
+    /**
+     * PATCH request wrapper
+     *
+     * @param string $url
+     * @param array  $payload
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function patch($url, array $payload)
+    {
+        $this->validateResources($payload);
+
+        return $this->doRequest('PATCH', $url, \json_encode($payload));
+    }
+
+    /**
+     * DELETE request wrapper
+     *
+     * @param string $url
+     * @param string $pKey
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function delete($url, $pKey)
+    {
+        return $this->doRequest('DELETE', "{$url}/{$pKey}");
     }
 }
