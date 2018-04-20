@@ -40,6 +40,11 @@ $data['CampaignStandard.profileMetadata'] = $campaignClient->getProfileMetadata(
 $data['CampaignStandard.profiles'] = $campaignClient->getProfiles();
 $data['CampaignStandard.profiles.email'] = $campaignClient->getProfiles(10, 'email');
 $data['CampaignStandard.profiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.email']);
+
+//$data['CampaignStandard.profiles.extended'] = $campaignClient->getProfilesExtended();
+//$data['CampaignStandard.profiles.extended.email'] = $campaignClient->getProfilesExtended(10, 'email');
+//$data['CampaignStandard.profiles.extended.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.extended.email']);
+
 $data['CampaignStandard.profileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.profiles.email.next10']->content));
 $data['CampaignStandard.updateProfile.before'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
 $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
@@ -48,6 +53,9 @@ $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProf
 );
 $data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
 $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.updateProfile.before']);
+if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
+    $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.updateProfile.after']->content[0]->businessId);
+}
 //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
 
 
@@ -88,7 +96,6 @@ $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscr
         }
 
     </style>
-<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/rainbow.min.css">
 </head>
 <body>
@@ -96,7 +103,7 @@ $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscr
     <section>
         <h1 class="toggler"><?php print $key ?></h1>
         <div class="togglable">
-            <pre><code><?php print_r($value); ?></code></pre>
+            <pre><code><?php print var_export($value, true); ?></code></pre>
         </div>
     </section>
 <?php endforeach; ?>

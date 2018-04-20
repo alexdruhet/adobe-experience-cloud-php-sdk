@@ -10,37 +10,12 @@ namespace Pixadelic\Adobe\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
 use Pixadelic\Adobe\Api\AccessToken;
-use Pixadelic\Adobe\Exception\AccessTokenException;
 
 /**
  * Class AccessTokenTest
  */
 final class AccessTokenTest extends TestCase
 {
-    const REQUIRED_CONFIG = [
-        'private_key' => 'string',
-        'api_key' => 'string',
-        'tech_acct' => 'string',
-        'organization' => 'string',
-        'client_secret' => 'string',
-        'tenant' => 'string',
-        'access_endpoint' => 'string',
-        'exchange_endpoint' => 'string',
-        'audience' => 'string',
-    ];
-
-    const INVALID_CONFIG = [
-        'wrong_key' => '',
-        'private_key' => null,
-        'api_key' => null,
-        '_tech_acct' => '',
-        '_organization' => '',
-        '_client_secret' => '',
-        '_tenant' => '',
-        '_access_endpoint' => '',
-        '_exchange_endpoint' => '',
-        '_audience' => '',
-    ];
 
     const SUCCESS_RESPONSE = [
         'token_type' => 'bearer',
@@ -52,44 +27,6 @@ final class AccessTokenTest extends TestCase
         'error' => true,
         'error_message' => 'Expected error message',
     ];
-
-    /**
-     * Test AccessToken construction
-     * with a valid configuration
-     *
-     * @throws \Exception
-     */
-    public function testConfigSuccess()
-    {
-        $classname = 'Pixadelic\Adobe\Api\AccessToken';
-
-        // Get mock, without the constructor being called
-        $mock = $this->getMockBuilder($classname)
-            ->disableOriginalConstructor()
-            ->setMethods(array('setConfig'))
-            ->getMock();
-
-        // Set expectations for constructor calls
-        $mock->expects($this->once())
-            ->method('setConfig')
-            ->with($this->equalTo(self::REQUIRED_CONFIG));
-
-        // Now call the constructor, applying expectations
-        $reflectedClass = new \ReflectionClass($classname);
-        $constructor = $reflectedClass->getConstructor();
-        $constructor->invoke($mock, self::REQUIRED_CONFIG);
-    }
-
-    /**
-     * Test invalid config throw an AccessTokenException
-     *
-     * @throws \Pixadelic\Adobe\Exception\AccessTokenException
-     */
-    public function testConfigFail()
-    {
-        $this->expectException(AccessTokenException::class);
-        new AccessToken(self::INVALID_CONFIG);
-    }
 
     /**
      * Test retrieved attributes and types

@@ -47,6 +47,15 @@ class CampaignStandard extends AbstractBase
         return $this->get($url, ['_lineCount' => $limit]);
     }
 
+//    public function getProfilesExtended($limit = 10, $field = null)
+//    {
+//        $this->setExtended();
+//        $content = $this->getProfiles($limit, $field);
+//        $this->unsetExtended();
+//
+//        return $content;
+//    }
+
     /**
      * @param string $email
      *
@@ -59,6 +68,24 @@ class CampaignStandard extends AbstractBase
     public function getProfileByEmail($email)
     {
         return $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email]);
+    }
+
+    /**
+     * @param string $businessId
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getProfileExtended($businessId)
+    {
+        $this->setExtended();
+        $content = $this->get("{$this->majorEndpoints[0]}/{$businessId}");
+        $this->unsetExtended();
+
+        return $content;
     }
 
     /**
@@ -79,7 +106,7 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
-     * @param string $linkId
+     * @param \stdClass $profile
      *
      * @return mixed
      *

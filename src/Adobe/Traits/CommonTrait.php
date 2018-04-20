@@ -227,9 +227,11 @@ trait CommonTrait
     /**
      * @param array $config
      *
+     * @return $this
+     *
      * @throws \Pixadelic\Adobe\Exception\ClientException
      */
-    protected function setConfig(array $config)
+    public function setConfig(array $config)
     {
         try {
             // Required parameters
@@ -264,7 +266,7 @@ trait CommonTrait
             throw new ClientException($exception->getMessage());
         }
 
-        $this
+        return $this
             ->initDebug()
             ->initCache()
             ->addDebugInfo('config', $config);
@@ -300,12 +302,16 @@ trait CommonTrait
     /**
      * @param string $name
      * @param string $value
+     *
+     * @return $this
      */
     protected function addDebugInfo($name, $value)
     {
         if ($this->debug) {
             $this->debugInfo->{$name} = $value;
         }
+
+        return $this;
     }
 
     /**
