@@ -28,21 +28,26 @@ $data = [];
  * Getting access token
  */
 $accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
+$accessToken->flush();
 $data['AccessToken'] = $accessToken->get();
 
 /**
  * CampaignStandard client example
  */
 $campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
+$campaignClient->flush();
 $data['CampaignStandard.profileMetadata'] = $campaignClient->getProfileMetadata();
 $data['CampaignStandard.profiles'] = $campaignClient->getProfiles();
 $data['CampaignStandard.profiles.email'] = $campaignClient->getProfiles(10, 'email');
 $data['CampaignStandard.profiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.email']);
 $data['CampaignStandard.profileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.profiles.email.next10']->content));
 $data['CampaignStandard.updateProfile.before'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
-$data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile($data['CampaignStandard.updateProfile.before']->content[0]->PKey, ['preferredLanguage' => 'fr_fr']);
+$data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
+    $data['CampaignStandard.updateProfile.before']->content[0]->PKey,
+    ['preferredLanguage' => 'fr_fr']
+);
 $data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
-//$data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.updateProfile.before']->content[0]->subscriptions->href);
+$data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.updateProfile.before']);
 //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
 
 
@@ -81,26 +86,30 @@ $data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEma
         .togglable-opened {
             display: block;
         }
+
     </style>
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/rainbow.min.css">
 </head>
 <body>
 <?php foreach ($data as $key => $value) : ?>
     <section>
         <h1 class="toggler"><?php print $key ?></h1>
         <div class="togglable">
-            <?php var_dump($value); ?>
+            <pre><code><?php print_r($value); ?></code></pre>
         </div>
     </section>
 <?php endforeach; ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
 <script>
     (function (document, randomColor) {
         "use strict";
-        var togglables = document.querySelectorAll(".togglable"),
+        let togglables = document.querySelectorAll(".togglable"),
             i          = 0;
 
         function init(togglable, i) {
-            var toggler     = togglable.parentElement.querySelector(".toggler"),
+            let toggler     = togglable.parentElement.querySelector(".toggler"),
                 togglerHtml = toggler.innerHTML,
                 color       = randomColor({
                     luminosity: "light",
@@ -127,6 +136,9 @@ $data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEma
                 init(togglables[i], i);
             }
         }
+
+        hljs.initHighlightingOnLoad();
+
     }(document, randomColor));
 </script>
 </body>

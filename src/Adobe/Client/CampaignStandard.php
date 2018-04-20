@@ -82,14 +82,15 @@ class CampaignStandard extends AbstractBase
      * @param string $linkId
      *
      * @return mixed
+     *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getSubscriptionsByProfile($profile)
+    public function getSubscriptionsByProfile(\stdClass $profile)
     {
         // TODO
-        //return $this->get($profile->content[0]->subscriptions->href);
+        return $this->get($profile->content[0]->subscriptions->href);
     }
 
     /**
