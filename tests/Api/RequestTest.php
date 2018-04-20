@@ -21,7 +21,7 @@ final class RequestTest extends TestCase
      */
     public function testFormParams()
     {
-        $formParams = ['form_params' =>['form_param_1' => 'form_param_1_value']];
+        $formParams = ['form_params' => ['form_param_1' => 'form_param_1_value']];
 
         $request = new Request('GET', 'test', $formParams);
         $this->assertSame($formParams, $request->getOptions());

@@ -8,6 +8,7 @@
 
 namespace Pixadelic\Adobe\Traits;
 
+use Pixadelic\Adobe\Exception\ClientException;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 
 /**
@@ -15,6 +16,84 @@ use Symfony\Component\Cache\Simple\FilesystemCache;
  */
 trait CommonTrait
 {
+    /**
+     * Path to private key
+     *
+     * The private key filename or string literal to use to sign the token
+     *
+     * @var string
+     */
+    protected $privateKey;
+
+    /**
+     * API key (Client ID)
+     *
+     * The issuer, usually the client_id
+     *
+     * @var string
+     */
+    protected $apiKey;
+
+    /**
+     * Technical Account ID
+     *
+     * @var string
+     */
+    protected $techAcct;
+
+    /**
+     * Organization ID
+     *
+     * The subject, usually a user_id
+     *
+     * @var string
+     */
+    protected $organization;
+
+    /**
+     * Client secret
+     *
+     * @var string
+     */
+    protected $clientSecret;
+
+    /**
+     * The customer instances name
+     * provided by Adobe.
+     *
+     * <TENANT> : the production instance
+     * <TENANT-mkt-stage1>: the stage instance
+     *
+     * Here this property is passed by the
+     * AccessToken object.
+     *
+     * @var string
+     */
+    protected $tenant;
+
+    /**
+     * Audience
+     *
+     * The audience, usually the URI for the oauth server
+     *
+     * @var string
+     */
+    protected $audience;
+
+    /**
+     * Access endpoint url
+     *
+     * @var string
+     */
+    protected $accessEndpoint;
+
+    /**
+     * Exchange endpoint url
+     *
+     * @var string
+     */
+    protected $exchangeEndpoint;
+
     /**
      * Expiration delay
      * in seconds.
@@ -131,6 +210,64 @@ trait CommonTrait
         if ($this->cache && $this->cache->has($this->cacheId)) {
             $this->cache->delete($this->cacheId);
         }
+    }
+
+    /**
+     * @return bool|\stdClass
+     */
+    public function getDebugInfo()
+    {
+        if ($this->debug) {
+            return $this->debugInfo;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array $config
+     *
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     */
+    protected function setConfig(array $config)
+    {
+        try {
+            // Required parameters
+            $this->privateKey = $config['private_key'];
+            $this->apiKey = $config['api_key'];
+            $this->techAcct = $config['tech_acct'];
+            $this->organization = $config['organization'];
+            $this->clientSecret = $config['client_secret'];
+            $this->tenant = $config['tenant'];
+            $this->accessEndpoint = $config['access_endpoint'];
+            $this->exchangeEndpoint = $config['exchange_endpoint'];
+            $this->audience = $config['audience'];
+
+            // Optional parameters
+            if (isset($config['expiration'])) {
+                $this->expiration = (int) $config['expiration'];
+            }
+            if (isset($config['cache'])) {
+                $this->enableCache = (bool) $config['cache'];
+            }
+            if (isset($config['staging'])) {
+                $this->staging = (bool) $config['staging'];
+            }
+            if ($this->staging) {
+                $this->tenant .= $this->stagingSuffix;
+                $config['tenant'] = $this->tenant;
+            }
+            if (isset($config['debug'])) {
+                $this->debug = (bool) $config['debug'];
+            }
+        } catch (\Exception $exception) {
+            throw new ClientException($exception->getMessage());
+        }
+
+        $this
+            ->initDebug()
+            ->initCache()
+            ->addDebugInfo('config', $config);
     }
 
     /**

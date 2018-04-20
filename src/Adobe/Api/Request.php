@@ -28,8 +28,9 @@ class Request
      * @param null   $body
      * @param array  $headers
      * @param string $baseUri
+     * @param bool   $debug
      */
-    public function __construct($method, $url, $body = null, $headers = [], $baseUri = '')
+    public function __construct($method, $url, $body = null, $headers = [], $baseUri = '', $debug = false)
     {
         $this->method = $method;
         $this->url = $url;
@@ -45,6 +46,9 @@ class Request
         }
         if ($baseUri) {
             $this->options['base_uri'] = $baseUri;
+        }
+        if ($debug) {
+            $this->options['debug'] = true;
         }
         $this->client = new Client();
     }
@@ -73,5 +77,35 @@ class Request
     public function getConfig()
     {
         return $this->client->getConfig();
+    }
+
+    /**
+     * Activate debug mode
+     *
+     * @param bool $debug
+     */
+    public function setDebug($debug)
+    {
+        if ($debug) {
+            $this->options['debug'] = fopen('php://temp', 'r+');
+        }
+    }
+
+    /**
+     * Get Guzzle debug info
+     * from temp php stream
+     * if the option is enabled.
+     *
+     * @return bool|string
+     */
+    public function getDebugInfo()
+    {
+        if (isset($this->options['debug'])) {
+            fseek($this->options['debug'], 0);
+
+            return stream_get_contents($this->options['debug']);
+        }
+
+        return false;
     }
 }

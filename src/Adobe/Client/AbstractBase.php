@@ -79,30 +79,16 @@ abstract class AbstractBase
     protected $currentMajorEndpointIndex = 0;
 
     /**
-     * The customer instances name
-     * provided by Adobe.
-     *
-     * <TENANT> : the production instance
-     * <TENANT-mkt-stage1>: the stage instance
-     *
-     * Here this property is passed by the
-     * AccessToken object.
-     *
-     * @var string
-     */
-    protected $tenant;
-
-    /**
      * AbstractBase constructor.
      *
      * @param array $config
+     *
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      */
     public function __construct(array $config)
     {
         $this->config = $config;
-        $this
-            ->initCache()
-            ->initDebug();
+        $this->setConfig($config);
         $this->setEndpoints();
         $this->setMajorEndpoints();
     }
@@ -118,7 +104,7 @@ abstract class AbstractBase
      */
     public function getMetadata($resource)
     {
-        $index = $this->getCurrentEndpointIndex().'/'.$resource;
+        $index = "{$this->endpoints[$this->currentEndpointIndex]}/{$resource}";
         if (!isset($this->metadata[$index])) {
             $url = sprintf('resourceType/%s', $resource);
             $this->metadatas[$index] = $this->get($url);
@@ -210,6 +196,7 @@ abstract class AbstractBase
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     protected function getAccessToken()
@@ -228,6 +215,7 @@ abstract class AbstractBase
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     protected function getHeaders()
@@ -242,6 +230,7 @@ abstract class AbstractBase
     /**
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     protected function prepareHeaders()
@@ -293,7 +282,9 @@ abstract class AbstractBase
         if (!\property_exists($metadata->content, $resource)) {
             throw new ClientException("{$resource} does not exists");
         }
-        if ($value && \property_exists($metadata->content->{$resource}, 'values') && !\property_exists($metadata->content->{$resource}->values, $value)) {
+        if ($value && \property_exists($metadata->content->{$resource}, 'values')
+            && !\property_exists($metadata->content->{$resource}->values, $value)
+        ) {
             throw new ClientException("{$value} is not a valid value for {$resource}");
         }
     }
@@ -333,10 +324,20 @@ abstract class AbstractBase
         try {
             $headers = $this->getHeaders();
             $baseUri = $this->getBaseUri();
-            $request = new Request($method, $url, $body, $headers, $baseUri);
+            $request = new Request($method, $url, $body, $headers, $baseUri, $this->debug);
+            $request->setDebug($this->debug);
             $response = $request->send();
+            $requestDebugInfo = $request->getDebugInfo();
+            if ($requestDebugInfo) {
+                $this->addDebugInfo('request', $requestDebugInfo);
+            }
             $code = $response->getStatusCode();
             $reason = $response->getReasonPhrase();
+            $content = \json_decode($response->getBody()->getContents());
+
+            if ($this->debug) {
+                $content->debug = $this->getDebugInfo();
+            }
 
             if (200 !== $code) {
                 throw new ClientException($reason);
@@ -345,7 +346,8 @@ abstract class AbstractBase
             throw new ClientException($exception->getMessage());
         }
 
-        return \json_decode($response->getBody()->getContents());
+        //return \json_decode($response->getBody()->getContents());
+        return $content;
     }
 
     /**

@@ -112,10 +112,12 @@ final class AccessTokenTest extends TestCase
 
         // Applying assertions
         $this->assertObjectHasAttribute('token_type', $response);
+        // @codingStandardsIgnoreStart
         $this->assertEquals('bearer', $response->token_type);
         $this->assertObjectHasAttribute('access_token', $response);
         $this->assertInternalType('string', $response->access_token);
         $this->assertObjectHasAttribute('expires_in', $response);
         $this->assertInternalType('int', $response->expires_in);
+        // @codingStandardsIgnoreEnd
     }
 }
