@@ -20,6 +20,8 @@ abstract class AbstractBase
 {
     use CommonTrait;
 
+    const EXTENDED_SUFFIX = 'Ext';
+
     /**
      * @var array
      */
@@ -77,6 +79,11 @@ abstract class AbstractBase
      */
     protected $majorEndpoints = [];
     protected $currentMajorEndpointIndex = 0;
+
+    /**
+     * @var bool
+     */
+    protected $useExtended = false;
 
     /**
      * AbstractBase constructor.
@@ -192,6 +199,22 @@ abstract class AbstractBase
     abstract protected function setMajorEndpoints();
 
     /**
+     *
+     */
+    protected function setExtended()
+    {
+        $this->useExtended = true;
+    }
+
+    /**
+     *
+     */
+    protected function unsetExtended()
+    {
+        $this->useExtended = true;
+    }
+
+    /**
      * @return mixed|null|\Psr\Http\Message\StreamInterface|\stdClass
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
@@ -252,7 +275,9 @@ abstract class AbstractBase
      */
     protected function getBaseUri()
     {
-        return "{$this->baseUri}/{$this->tenant}/{$this->endpoints[$this->currentEndpointIndex]}/";
+        $currentEndpoint = $this->getCurrentEndpointIndex();
+
+        return "{$this->baseUri}/{$this->tenant}/{$currentEndpoint}/";
     }
 
     /**
@@ -262,7 +287,24 @@ abstract class AbstractBase
      */
     protected function getCurrentEndpointIndex()
     {
-        return "{$this->endpoints[$this->currentEndpointIndex]}/{$this->majorEndpoints[$this->currentMajorEndpointIndex]}";
+        $currentEndpoint = $this->endpoints[$this->currentEndpointIndex];
+        if ($this->useExtended) {
+            $currentEndpoint .= self::EXTENDED_SUFFIX;
+        }
+
+        return $currentEndpoint;
+    }
+
+    /**
+     * Retrieve full endpoints uri
+     *
+     * @return string
+     */
+    protected function getCurrentFullEndpointIndex()
+    {
+        $currentEndpoint = $this->getCurrentEndpointIndex();
+
+        return "{$currentEndpoint}/{$this->majorEndpoints[$this->currentMajorEndpointIndex]}";
     }
 
     /**
