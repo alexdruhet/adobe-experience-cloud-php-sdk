@@ -423,7 +423,7 @@ abstract class AbstractBase
      */
     protected function post($url, array $payload)
     {
-        $this->validateResources($payload);
+        //$this->validateResources($payload);
 
         return $this->doRequest('POST', $url, \json_encode($payload));
     }
@@ -451,7 +451,7 @@ abstract class AbstractBase
      * DELETE request wrapper
      *
      * @param string $url
-     * @param string $pKey
+     * @param string $linkIdentifier
      *
      * @return mixed
      *
@@ -459,8 +459,8 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function delete($url, $pKey)
+    protected function delete($url, $linkIdentifier)
     {
-        return $this->doRequest('DELETE', "{$url}/{$pKey}");
+        return $this->doRequest('DELETE', "{$url}/{$linkIdentifier}");
     }
 }

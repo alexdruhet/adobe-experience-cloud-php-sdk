@@ -102,8 +102,21 @@ class CampaignStandard extends AbstractBase
     {
         $url = $this->majorEndpoints[0];
 
-        return $this->patch("{$url}/${pKey}", $payload);
+        return $this->patch("{$url}/{$pKey}", $payload);
     }
+
+    /**
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getServices()
+    {
+        return $this->get($this->majorEndpoints[1]);
+    }
+
 
     /**
      * @param \stdClass $profile
@@ -116,8 +129,36 @@ class CampaignStandard extends AbstractBase
      */
     public function getSubscriptionsByProfile(\stdClass $profile)
     {
-        // TODO
         return $this->get($profile->content[0]->subscriptions->href);
+    }
+
+    /**
+     * @param string $profilePKey
+     * @param string $subscriptionPKey
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function addSubscription($profilePKey, $subscriptionPKey)
+    {
+        return $this->post("{$this->majorEndpoints[0]}/{$profilePKey}/subscriptions", ['service' => ['' => $subscriptionPKey]]);
+    }
+
+    /**
+     * @param string $linkIdentifier
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function deleteSubscription($linkIdentifier)
+    {
+        return $this->delete('profile', $linkIdentifier);
     }
 
     /**

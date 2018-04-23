@@ -60,6 +60,8 @@ class Request
      */
     public function send()
     {
+        $this->getRawCurlRequest();
+
         return $this->client->request($this->method, $this->url, $this->options);
     }
 
@@ -107,5 +109,46 @@ class Request
         }
 
         return false;
+    }
+
+    /**
+     * @param string $message
+     */
+    protected function addDebugInfo($message)
+    {
+        if (isset($this->options['debug'])) {
+            fputs($this->options['debug'], "{$message}\n");
+        }
+    }
+
+    /**
+     * Retrieve the curl raw request
+     *
+     * @return string
+     */
+    protected function getRawCurlRequest()
+    {
+        $rawCurlRequest = '';
+        if (isset($this->options['debug'])
+            && isset($this->options['base_uri'])
+            && isset($this->options['headers'])
+        ) {
+            $headers = '';
+            foreach ($this->options['headers'] as $name => $value) {
+                $headers .= "-H \"{$name}: {$value}\"".\PHP_EOL;
+            }
+            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl ".\PHP_EOL."-X {$this->method} {$this->options['base_uri']}{$this->url} ".\PHP_EOL.$headers;
+            if (isset($this->options['body'])) {
+                $rawCurlRequest .= \PHP_EOL."-i -d \"{$this->options['body']}\"";
+            }
+            $rawCurlRequest .= \PHP_EOL;
+            //\print_r($rawCurlRequest);
+            //echo \PHP_EOL.\PHP_EOL;
+            //echo '<br>---<br>';
+            //echo \PHP_EOL.\PHP_EOL;
+            $this->addDebugInfo($rawCurlRequest);
+        }
+
+        return $rawCurlRequest;
     }
 }
