@@ -138,6 +138,7 @@ class CommonTraitTest extends TestCase
      * @param array  $args
      *
      * @return mixed
+     *
      * @throws \ReflectionException
      */
     protected static function callMethod($obj, $name, array $args)

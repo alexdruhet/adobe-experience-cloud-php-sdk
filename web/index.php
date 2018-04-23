@@ -53,6 +53,12 @@ $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProf
 );
 $data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
 $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.updateProfile.before']);
+$data['CampaignStandard.getServices'] = $campaignClient->getServices();
+$data['CampaignStandard.addSubscriptions'] = $campaignClient->addSubscription(
+    $data['CampaignStandard.updateProfile.before']->content[0]->PKey,
+    $data['CampaignStandard.getServices']->content[0]->PKey
+);
+//$data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription();
 if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
     $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.updateProfile.after']->content[0]->businessId);
 }
