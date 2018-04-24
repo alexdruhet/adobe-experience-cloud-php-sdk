@@ -96,7 +96,7 @@ class AccessToken
                 $message = $content->error.\PHP_EOL.$content->error_description;
                 // @codingStandardsIgnoreEnd
             }
-            throw new AccessTokenException($message);
+            throw new AccessTokenException($message, $status);
         }
 
         // Add debug info to response if necessary
@@ -125,10 +125,10 @@ class AccessToken
         if (file_exists($this->privateKey)) {
             $privateKey = file_get_contents($this->privateKey);
         } else {
-            throw new AccessTokenException(self::ERROR_MESSAGES['generateJwt.privateKey.notFound']);
+            throw new AccessTokenException(self::ERROR_MESSAGES['generateJwt.privateKey.notFound'], 500);
         }
         if (!isset($privateKey)) {
-            throw new AccessTokenException(self::ERROR_MESSAGES['generateJwt.privateKey.undefined']);
+            throw new AccessTokenException(self::ERROR_MESSAGES['generateJwt.privateKey.undefined'], 500);
         }
 
         // Preparing payload

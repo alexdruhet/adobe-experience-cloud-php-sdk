@@ -9,6 +9,7 @@
 namespace Pixadelic\Adobe\Api;
 
 use GuzzleHttp\Client;
+use Pixadelic\Adobe\Exception\ClientException;
 
 /**
  * Class Request
@@ -54,15 +55,23 @@ class Request
     }
 
     /**
-     * @return mixed|\Psr\Http\Message\ResponseInterface
+     * @return bool|mixed|\Psr\Http\Message\ResponseInterface
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      */
     public function send()
     {
         $this->getRawCurlRequest();
+        $response = false;
 
-        return $this->client->request($this->method, $this->url, $this->options);
+        try {
+            $response = $this->client->request($this->method, $this->url, $this->options);
+        } catch (\Exception $e) {
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        return $response;
     }
 
     /**
