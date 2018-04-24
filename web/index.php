@@ -39,6 +39,7 @@ try {
     $campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
     $campaignClient->flush();
     $data['CampaignStandard.getProfileMetadata'] = $campaignClient->getProfileMetadata();
+    //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
     $data['CampaignStandard.getProfiles'] = $campaignClient->getProfiles();
     $data['CampaignStandard.getProfiles.email'] = $campaignClient->getProfiles(10, 'email');
     $data['CampaignStandard.getProfiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.getProfiles.email']);
@@ -58,21 +59,26 @@ try {
 
     $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.getProfileByEmail.before']);
     $data['CampaignStandard.getServices'] = $campaignClient->getServices();
+
+    $data['CampaignStandard.addSubscriptions.arg1.pk'] = $data['CampaignStandard.getSubscriptionsByProfile'];
+    $data['CampaignStandard.addSubscriptions.arg2.pk'] = $data['CampaignStandard.getServices']->content[0]->name;
+
     $data['CampaignStandard.addSubscriptions.fail'] = $campaignClient->addSubscription(
         $data['CampaignStandard.getProfileByEmail.before'],
-        $data['CampaignStandard.getServices']->content[0]->PKey
+        $data['CampaignStandard.getServices']->content[0]
     );
-    $data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getServices']->content[0]->href);
+
+    // TODO submit a subscription not a service...
+    //$data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getSubscriptionsByProfile']->content[0]);
+
     $data['CampaignStandard.addSubscriptions.success'] = $campaignClient->addSubscription(
         $data['CampaignStandard.getProfileByEmail.before'],
-        $data['CampaignStandard.getServices']->content[0]->service->Pkey
+        $data['CampaignStandard.getServices']->content[0]
     );
 
     if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
         $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.getProfileByEmail.after']->content[0]->businessId);
     }
-
-    //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
 } catch (Exception $e) {
 }
 

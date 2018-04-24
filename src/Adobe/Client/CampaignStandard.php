@@ -134,7 +134,7 @@ class CampaignStandard extends AbstractBase
 
     /**
      * @param \stdClass $profile
-     * @param string    $subscriptionPKey
+     * @param \stdClass $service
      *
      * @return mixed
      *
@@ -142,21 +142,22 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function addSubscription(\stdClass $profile, $subscriptionPKey)
+    public function addSubscription(\stdClass $profile, \stdClass $service)
     {
         // First we check if the profile already subscribe to the service
         $subscriptions = $this->getSubscriptionsByProfile($profile);
         foreach ($subscriptions->content as $subscription) {
-            if ($subscription->service->PKey === $subscriptionPKey) {
-                return ['notification' => 'This profile has already subscribe to the service'];
+            if ($subscription->service->name === $service->name) {
+                // TODO: find a better return
+                return ['code' => 304, 'message' => 'This profile has already subscribe to the service'];
             }
         }
 
-        return $this->post("{$this->majorEndpoints[0]}/{$profile->content[0]->PKey}/subscriptions", ['service' => ['PKey' => $subscriptionPKey]]);
+        return $this->post("{$this->majorEndpoints[0]}/{$profile->content[0]->PKey}/subscriptions", ['service' => ['PKey' => $service->PKey]]);
     }
 
     /**
-     * @param string $linkIdentifier
+     * @param \stdClass $subscription
      *
      * @return mixed
      *
@@ -164,9 +165,9 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function deleteSubscription($linkIdentifier)
+    public function deleteSubscription(\stdClass $subscription)
     {
-        return $this->delete('profile', $linkIdentifier);
+        return $this->delete($subscription->service->href);
     }
 
     /**
