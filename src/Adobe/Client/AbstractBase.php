@@ -322,12 +322,12 @@ abstract class AbstractBase
     {
         $metadata = $this->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
         if (!\property_exists($metadata->content, $resource)) {
-            throw new ClientException("{$resource} does not exists");
+            throw new ClientException("{$resource} does not exists", 400);
         }
         if ($value && \property_exists($metadata->content->{$resource}, 'values')
             && !\property_exists($metadata->content->{$resource}->values, $value)
         ) {
-            throw new ClientException("{$value} is not a valid value for {$resource}");
+            throw new ClientException("{$value} is not a valid value for {$resource}", 400);
         }
     }
 
@@ -382,10 +382,10 @@ abstract class AbstractBase
             }
 
             if (200 !== $code) {
-                throw new ClientException($reason);
+                throw new ClientException($reason, $code);
             }
-        } catch (\Exception $exception) {
-            throw new ClientException($exception->getMessage());
+        } catch (\Exception $e) {
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
         //return \json_decode($response->getBody()->getContents());

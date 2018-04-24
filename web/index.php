@@ -14,56 +14,67 @@ use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\CampaignStandard;
 use Symfony\Component\Yaml\Yaml;
 
-/**
- * Load and prepare config
- */
-$config = Yaml::parseFile($appRoot.'/app/config/config.yml');
-if (isset($config['adobe']['campaign']['credentials']['private_key'])) {
-    $config['adobe']['campaign']['credentials']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['credentials']['private_key'];
-}
-
 $data = [];
 
-/**
- * Getting access token
- */
-$accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
-$accessToken->flush();
-$data['AccessToken'] = $accessToken->get();
+try {
 
-/**
- * CampaignStandard client example
- */
-$campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
-$campaignClient->flush();
-$data['CampaignStandard.profileMetadata'] = $campaignClient->getProfileMetadata();
-$data['CampaignStandard.profiles'] = $campaignClient->getProfiles();
-$data['CampaignStandard.profiles.email'] = $campaignClient->getProfiles(10, 'email');
-$data['CampaignStandard.profiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.email']);
+    /**
+     * Load and prepare config
+     */
+    $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
+    if (isset($config['adobe']['campaign']['credentials']['private_key'])) {
+        $config['adobe']['campaign']['credentials']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['credentials']['private_key'];
+    }
+
+    /**
+     * Getting access token
+     */
+    $accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
+    $accessToken->flush();
+    $data['AccessToken'] = $accessToken->get();
+
+    /**
+     * CampaignStandard client example
+     */
+    $campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
+    $campaignClient->flush();
+    $data['CampaignStandard.getProfileMetadata'] = $campaignClient->getProfileMetadata();
+    $data['CampaignStandard.getProfiles'] = $campaignClient->getProfiles();
+    $data['CampaignStandard.getProfiles.email'] = $campaignClient->getProfiles(10, 'email');
+    $data['CampaignStandard.getProfiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.getProfiles.email']);
 
 //$data['CampaignStandard.profiles.extended'] = $campaignClient->getProfilesExtended();
 //$data['CampaignStandard.profiles.extended.email'] = $campaignClient->getProfilesExtended(10, 'email');
 //$data['CampaignStandard.profiles.extended.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.extended.email']);
 
-$data['CampaignStandard.profileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.profiles.email.next10']->content));
-$data['CampaignStandard.updateProfile.before'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
-$data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
-    $data['CampaignStandard.updateProfile.before']->content[0]->PKey,
-    ['preferredLanguage' => 'fr_fr']
-);
-$data['CampaignStandard.updateProfile.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
-$data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.updateProfile.before']);
-$data['CampaignStandard.getServices'] = $campaignClient->getServices();
-$data['CampaignStandard.addSubscriptions'] = $campaignClient->addSubscription(
-    $data['CampaignStandard.updateProfile.before']->content[0]->PKey,
-    $data['CampaignStandard.getServices']->content[0]->PKey
-);
-//$data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription();
-if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
-    $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.updateProfile.after']->content[0]->businessId);
-}
-//$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
+    $data['CampaignStandard.getProfileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.getProfiles.email.next10']->content));
 
+    $data['CampaignStandard.getProfileByEmail.before'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
+    $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
+        $data['CampaignStandard.getProfileByEmail.before']->content[0]->PKey,
+        ['preferredLanguage' => 'fr_fr']
+    );
+    $data['CampaignStandard.getProfileByEmail.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
+
+    $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.getProfileByEmail.before']);
+    $data['CampaignStandard.getServices'] = $campaignClient->getServices();
+    $data['CampaignStandard.addSubscriptions.fail'] = $campaignClient->addSubscription(
+        $data['CampaignStandard.getProfileByEmail.before'],
+        $data['CampaignStandard.getServices']->content[0]->PKey
+    );
+    $data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getServices']->content[0]->href);
+    $data['CampaignStandard.addSubscriptions.success'] = $campaignClient->addSubscription(
+        $data['CampaignStandard.getProfileByEmail.before'],
+        $data['CampaignStandard.getServices']->content[0]->service->Pkey
+    );
+
+    if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
+        $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.getProfileByEmail.after']->content[0]->businessId);
+    }
+
+    //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
+} catch (Exception $e) {
+}
 
 ?><!DOCTYPE html>
 <html>
@@ -74,13 +85,15 @@ if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)
         body {
             font-family: sans-serif;
             background-color: #fafafa;
+            line-height: 1.5;
+            color: #222;
         }
 
         h1 {
             margin: 0;
             padding: 1rem 1.5rem;
             font-size: 24px;
-            line-height: 1.1;
+            line-height: 1.2;
         }
 
         pre {
@@ -101,6 +114,36 @@ if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)
             display: block;
         }
 
+        .error {
+            padding: 1rem 1.5rem;
+            background: #ff2600;
+            color: #fff;
+        }
+
+        .error strong {
+            color: #222;
+            font-size: 9rem;
+            float: left;
+            display: block;
+            padding: 0 1.5rem 0 0;
+            margin-bottom: -1rem;
+            line-height: 1;
+        }
+
+        .error h1 {
+            padding: 0 0 1rem 0;
+            float: left;
+            max-width: 70%;
+            overflow: auto;
+        }
+
+        .error pre {
+            clear: both;
+            max-width: 100%;
+            overflow: auto;
+            color: #efefef;
+        }
+
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/rainbow.min.css">
 </head>
@@ -113,6 +156,13 @@ if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)
         </div>
     </section>
 <?php endforeach; ?>
+<?php if (isset($e)) : ?>
+    <section class="error">
+        <strong><?php print $e->getCode(); ?></strong>
+        <h1><?php print $e->getMessage(); ?></h1>
+        <pre><?php print $e->getTraceAsString(); ?></pre>
+    </section>
+<?php endif; ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
 <script>

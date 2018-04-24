@@ -133,8 +133,8 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
-     * @param string $profilePKey
-     * @param string $subscriptionPKey
+     * @param \stdClass $profile
+     * @param string    $subscriptionPKey
      *
      * @return mixed
      *
@@ -142,9 +142,17 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function addSubscription($profilePKey, $subscriptionPKey)
+    public function addSubscription(\stdClass $profile, $subscriptionPKey)
     {
-        return $this->post("{$this->majorEndpoints[0]}/{$profilePKey}/subscriptions", ['service' => ['' => $subscriptionPKey]]);
+        // First we check if the profile already subscribe to the service
+        $subscriptions = $this->getSubscriptionsByProfile($profile);
+        foreach ($subscriptions->content as $subscription) {
+            if ($subscription->service->PKey === $subscriptionPKey) {
+                return ['notification' => 'This profile has already subscribe to the service'];
+            }
+        }
+
+        return $this->post("{$this->majorEndpoints[0]}/{$profile->content[0]->PKey}/subscriptions", ['service' => ['PKey' => $subscriptionPKey]]);
     }
 
     /**
