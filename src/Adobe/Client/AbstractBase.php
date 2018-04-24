@@ -450,7 +450,6 @@ abstract class AbstractBase
     /**
      * DELETE request wrapper
      *
-     * @param string $url
      * @param string $linkIdentifier
      *
      * @return mixed
@@ -459,8 +458,8 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function delete($url, $linkIdentifier)
+    protected function delete($linkIdentifier)
     {
-        return $this->doRequest('DELETE', "{$url}/{$linkIdentifier}");
+        return $this->doRequest('DELETE', $linkIdentifier);
     }
 }
