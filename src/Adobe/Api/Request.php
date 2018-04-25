@@ -63,7 +63,7 @@ class Request
     public function send()
     {
         $this->getRawCurlRequest();
-        $response = false;
+        $response = new \stdClass();
 
         try {
             $response = $this->client->request($this->method, $this->url, $this->options);
