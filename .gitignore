@@ -10,3 +10,6 @@ phpunit.xml
 app/ssl/
 vendor/
 *.log
+
+# We are dealing with a library so we ignore composer.lock
+composer.lock
