@@ -8,6 +8,8 @@
 
 namespace Pixadelic\Adobe\Client;
 
+use Pixadelic\Adobe\Exception\ClientException;
+
 /**
  * Class CampaignStandard
  */
@@ -149,7 +151,7 @@ class CampaignStandard extends AbstractBase
         foreach ($subscriptions->content as $subscription) {
             if ($subscription->service->name === $service->name) {
                 // TODO: find a better return
-                return ['code' => 304, 'message' => 'This profile has already subscribe to the service'];
+                return (object) ['code' => 304, 'message' => 'This profile has already subscribe to the service'];
             }
         }
 
@@ -167,7 +169,11 @@ class CampaignStandard extends AbstractBase
      */
     public function deleteSubscription(\stdClass $subscription)
     {
-        return $this->delete($subscription->service->href);
+        if (!isset($subscription->href)) {
+            throw new ClientException('Invalid susbcription deletion', 400);
+        }
+
+        return $this->delete($subscription->href);
     }
 
     /**
