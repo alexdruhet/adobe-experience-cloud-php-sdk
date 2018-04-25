@@ -14,7 +14,6 @@ use Pixadelic\Adobe\Client\AbstractBase;
 /**
  * Class AbstractBaseTest
  *
- * @package Pixadelic\Adobe\Tests\Client
  */
 class AbstractBaseTest extends TestCase
 {
