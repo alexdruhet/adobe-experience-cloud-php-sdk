@@ -60,16 +60,14 @@ try {
     $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.getProfileByEmail.before']);
     $data['CampaignStandard.getServices'] = $campaignClient->getServices();
 
-    $data['CampaignStandard.addSubscriptions.arg1.pk'] = $data['CampaignStandard.getSubscriptionsByProfile'];
-    $data['CampaignStandard.addSubscriptions.arg2.pk'] = $data['CampaignStandard.getServices']->content[0]->name;
-
     $data['CampaignStandard.addSubscriptions.fail'] = $campaignClient->addSubscription(
         $data['CampaignStandard.getProfileByEmail.before'],
         $data['CampaignStandard.getServices']->content[0]
     );
 
-    // TODO submit a subscription not a service...
-    //$data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getSubscriptionsByProfile']->content[0]);
+    if (isset($data['CampaignStandard.getSubscriptionsByProfile']->content[0]) && is_object($data['CampaignStandard.getSubscriptionsByProfile']->content[0])) {
+        $data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getSubscriptionsByProfile']->content[0]);
+    }
 
     $data['CampaignStandard.addSubscriptions.success'] = $campaignClient->addSubscription(
         $data['CampaignStandard.getProfileByEmail.before'],

@@ -377,18 +377,23 @@ abstract class AbstractBase
             $reason = $response->getReasonPhrase();
             $content = \json_decode($response->getBody()->getContents());
 
+            if (!$content) {
+                $content = new \stdClass();
+                $content->code = $code;
+                $content->message = $reason;
+            }
+
             if ($this->debug) {
                 $content->debug = $this->getDebugInfo();
             }
 
-            if (200 !== $code) {
+            if (400 <= $code) {
                 throw new ClientException($reason, $code);
             }
         } catch (\Exception $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
-        //return \json_decode($response->getBody()->getContents());
         return $content;
     }
 
