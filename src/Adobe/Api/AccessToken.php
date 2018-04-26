@@ -49,14 +49,13 @@ class AccessToken
     }
 
     /**
-     * Return an access token
+     * @param bool $force
      *
-     * @param bool $force bypass caching or not, default not
-     *
-     * @return mixed|null|\Psr\Http\Message\StreamInterface
+     * @return mixed|null
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function get($force = false)
