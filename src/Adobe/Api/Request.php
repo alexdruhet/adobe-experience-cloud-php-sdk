@@ -151,10 +151,10 @@ class Request
                 $rawCurlRequest .= \PHP_EOL."-i -d \"{$this->options['body']}\"";
             }
             $rawCurlRequest .= \PHP_EOL;
-            //\print_r($rawCurlRequest);
-            //echo \PHP_EOL.\PHP_EOL;
-            //echo '<br>---<br>';
-            //echo \PHP_EOL.\PHP_EOL;
+            \print_r($rawCurlRequest);
+            echo \PHP_EOL.\PHP_EOL;
+            echo '<br>---<br>';
+            echo \PHP_EOL.\PHP_EOL;
             $this->addDebugInfo($rawCurlRequest);
         }
 

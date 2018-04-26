@@ -22,21 +22,21 @@ try {
      * Load and prepare config
      */
     $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
-    if (isset($config['adobe']['campaign']['credentials']['private_key'])) {
-        $config['adobe']['campaign']['credentials']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['credentials']['private_key'];
+    if (isset($config['adobe']['campaign']['private_key'])) {
+        $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
     }
 
     /**
      * Getting access token
      */
-    $accessToken = new AccessToken($config['adobe']['campaign']['credentials']);
+    $accessToken = new AccessToken($config['adobe']['campaign']);
     $accessToken->flush();
     $data['AccessToken'] = $accessToken->get();
 
     /**
      * CampaignStandard client example
      */
-    $campaignClient = new CampaignStandard($config['adobe']['campaign']['credentials']);
+    $campaignClient = new CampaignStandard($config['adobe']['campaign']);
     $campaignClient->flush();
     $data['CampaignStandard.getProfileMetadata'] = $campaignClient->getProfileMetadata();
     //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
