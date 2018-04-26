@@ -110,6 +110,11 @@ trait CommonTrait
     protected $enableCache = true;
 
     /**
+     * @var string
+     */
+    protected $cacheDir;
+
+    /**
      * @var \Symfony\Component\Cache\Simple\FilesystemCache
      */
     protected $cache;
@@ -250,7 +255,17 @@ trait CommonTrait
                 $this->expiration = (int) $config['expiration'];
             }
             if (isset($config['cache'])) {
-                $this->enableCache = (bool) $config['cache'];
+                if (isset($config['cache']['enable'])) {
+                    $this->enableCache = (bool) $config['cache']['enable'];
+                }
+                if (isset($config['cache']['dir'])
+                    && $config['cache']['dir']
+                    && \file_exists($config['cache']['dir'])
+                ) {
+                    $this->cacheDir = $config['cache']['dir'];
+                } else {
+                    $this->cacheDir = null;
+                }
             }
             if (isset($config['staging'])) {
                 $this->staging = (bool) $config['staging'];
@@ -278,7 +293,7 @@ trait CommonTrait
     protected function initCache()
     {
         if ($this->enableCache) {
-            $this->cache = new FilesystemCache();
+            $this->cache = new FilesystemCache('aec', $this->expiration, $this->cacheDir);
 
             return $this->initCacheId();
         }
