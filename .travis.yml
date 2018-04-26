@@ -6,4 +6,5 @@ php:
   - '7.2'
 
 install:
+  - composer validate --no-check-all --strict
   - composer install
