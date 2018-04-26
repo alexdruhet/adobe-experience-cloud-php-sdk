@@ -1,22 +1,19 @@
-parameters:
 
 # Adobe marketing cloud API credentials
 adobe:
-
     campaign:
-        credentials:
-            private_key: # path to the private key your created the api credentials with
-            api_key: # given by Adobe (API Key, Client ID)
-            tech_acct: # given by Adobe (Technical account ID, sub)
-            organization: # given by Adobe (Organization ID, iss)
-            client_secret: # given by Adobe (Client secret)
-            audience: # given by Adobe (aud)
-            tenant: # given by Adobe
-            access_endpoint: # given by Adobe
-            exchange_endpoint: # given by Adobe
-            debug: false # default value, will add a debug node to response if set to true
-            stage: true # default value, will add adobe staging suffix to tenant if set to true
-            cache:
-                enable: true # default value
-                dir: ~ # default to php tmp
+        private_key: # path to the private key your created the api credentials with
+        api_key: # given by Adobe (API Key, Client ID)
+        tech_acct: # given by Adobe (Technical account ID, sub)
+        organization: # given by Adobe (Organization ID, iss)
+        client_secret: # given by Adobe (Client secret)
+        audience: # given by Adobe (aud)
+        tenant: # given by Adobe
+        access_endpoint: # given by Adobe
+        exchange_endpoint: # given by Adobe
+        debug: false # default value, will add a debug node to response if set to true
+        stage: true # default value, will add adobe staging suffix to tenant if set to true
+        cache:
+            enable: true # default value
+            dir: ~ # default to php tmp
 

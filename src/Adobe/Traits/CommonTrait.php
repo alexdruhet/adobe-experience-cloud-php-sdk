@@ -260,7 +260,7 @@ trait CommonTrait
                 }
                 if (isset($config['cache']['dir'])
                     && $config['cache']['dir']
-                    && \file_exists($config['cache']['dir'])
+                    //&& \file_exists($config['cache']['dir'])
                 ) {
                     $this->cacheDir = $config['cache']['dir'];
                 } else {
