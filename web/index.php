@@ -12,9 +12,13 @@ require $appRoot.'/vendor/autoload.php';
 
 use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\CampaignStandard;
+use Pixadelic\Adobe\Exception\ClientException;
 use Symfony\Component\Yaml\Yaml;
 
 $data = [];
+$exceptions = [];
+$testEmail = null;
+$newProfileTestEmail = null;
 
 try {
 
@@ -24,6 +28,12 @@ try {
     $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
     if (isset($config['adobe']['campaign']['private_key'])) {
         $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
+    }
+    if (isset($config['parameters']['test_email'])) {
+        $testEmail = $config['parameters']['test_email'];
+    }
+    if (isset($config['parameters']['new_profile_test_email'])) {
+        $newProfileTestEmail = $config['parameters']['new_profile_test_email'];
     }
 
     /**
@@ -50,12 +60,12 @@ try {
 
     $data['CampaignStandard.getProfileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.getProfiles.email.next10']->content));
 
-    $data['CampaignStandard.getProfileByEmail.before'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
+    $data['CampaignStandard.getProfileByEmail.before'] = $campaignClient->getProfileByEmail($testEmail);
     $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
         $data['CampaignStandard.getProfileByEmail.before']->content[0]->PKey,
         ['preferredLanguage' => 'fr_fr']
     );
-    $data['CampaignStandard.getProfileByEmail.after'] = $campaignClient->getProfileByEmail('alex.druhet@gmail.com');
+    $data['CampaignStandard.getProfileByEmail.after'] = $campaignClient->getProfileByEmail($testEmail);
 
     $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.getProfileByEmail.before']);
     $data['CampaignStandard.getServices'] = $campaignClient->getServices();
@@ -77,7 +87,40 @@ try {
     if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
         $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.getProfileByEmail.after']->content[0]->businessId);
     }
+
+    try {
+        $data['CampaignStandard.createProfile.errorCase1'] = $campaignClient->createProfile(['foo' => 'bar']);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
+    try {
+        $data['CampaignStandard.createProfile.errorCase2'] = $campaignClient->createProfile(['email' => 'foo@bar']);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
+    try {
+        $data['CampaignStandard.createProfile.errorCase3'] = $campaignClient->createProfile(['email' => 'foo@wwwwwwwwwww.xyz']);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
+    try {
+        $data['CampaignStandard.createProfile.errorCase4'] = $campaignClient->createProfile(['email' => $testEmail]);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
+    try {
+        $data['CampaignStandard.createProfile.success'] = $campaignClient->createProfile(['email' => $newProfileTestEmail]);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
+    try {
+        $tmpProfile = $campaignClient->getProfileByEmail($newProfileTestEmail);
+        $data['CampaignStandard.deleteProfile.success'] = $campaignClient->deleteProfile($tmpProfile->content[0]->PKey);
+    } catch (ClientException $e2) {
+        $exceptions[] = $e2;
+    }
 } catch (Exception $e) {
+    $exceptions[] = $e;
 }
 
 ?><!DOCTYPE html>
@@ -120,6 +163,7 @@ try {
 
         .error {
             padding: 1rem 1.5rem;
+            margin-bottom: 1px;
             background: #ff2600;
             color: #fff;
         }
@@ -160,13 +204,22 @@ try {
         </div>
     </section>
 <?php endforeach; ?>
-<?php if (isset($e)) : ?>
+<?php if (count($exceptions)) : ?>
+    <?php foreach ($exceptions as $exception) : ?>
+        <section class="error">
+            <strong><?php print $exception->getCode(); ?></strong>
+            <h1><?php print $exception->getMessage(); ?></h1>
+            <pre><?php print $exception->getTraceAsString(); ?></pre>
+        </section>
+    <?php endforeach; ?>
+<?php endif; ?>
+<?php /* if (isset($e)) : ?>
     <section class="error">
         <strong><?php print $e->getCode(); ?></strong>
         <h1><?php print $e->getMessage(); ?></h1>
         <pre><?php print $e->getTraceAsString(); ?></pre>
     </section>
-<?php endif; ?>
+<?php endif; */ ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
 <script>

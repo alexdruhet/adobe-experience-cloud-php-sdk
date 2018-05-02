@@ -18,6 +18,20 @@ final class CampaignStandardTest extends TestCase
     const EXPECTED_ENDPOINTS = ['campaign/profileAndServices'];
     const EXPECTED_MAJOR_ENDPOINTS = ['profile', 'service'];
 
+//    protected $config;
+//    protected $testEmail;
+//
+//    public function setUp() {
+//        $appRoot = __DIR__.'/../../';
+//        $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
+//        if (isset($config['adobe']['campaign']['private_key'])) {
+//            $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
+//        }
+//        if (isset($config['parameters']['test_email'])) {
+//            $testEmail = $config['parameters']['test_email'];
+//        }
+//    }
+
     /**
      *
      */

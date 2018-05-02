@@ -33,6 +33,7 @@ final class AccessTokenTest extends TestCase
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function testGet()
