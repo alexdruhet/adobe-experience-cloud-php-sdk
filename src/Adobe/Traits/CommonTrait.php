@@ -17,6 +17,14 @@ use Symfony\Component\Cache\Simple\FilesystemCache;
 trait CommonTrait
 {
     /**
+     * The Adobe organization unit
+     * mandatory
+     *
+     * @var string
+     */
+    protected $orgUnit;
+
+    /**
      * Path to private key
      *
      * The private key filename or string literal to use to sign the token
@@ -249,6 +257,7 @@ trait CommonTrait
             $this->accessEndpoint = $config['access_endpoint'];
             $this->exchangeEndpoint = $config['exchange_endpoint'];
             $this->audience = $config['audience'];
+            $this->orgUnit = $config['org_unit'];
 
             // Optional parameters
             if (isset($config['expiration'])) {

@@ -19,6 +19,7 @@ class CommonTraitTest extends TestCase
 {
 
     const REQUIRED_CONFIG = [
+        'org_unit' => 'string',
         'private_key' => 'string',
         'api_key' => 'string',
         'tech_acct' => 'string',

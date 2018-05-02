@@ -199,19 +199,23 @@ abstract class AbstractBase
     abstract protected function setMajorEndpoints();
 
     /**
-     *
+     * @return $this
      */
     protected function setExtended()
     {
         $this->useExtended = true;
+
+        return $this;
     }
 
     /**
-     *
+     * @return $this
      */
     protected function unsetExtended()
     {
-        $this->useExtended = true;
+        $this->useExtended = false;
+
+        return $this;
     }
 
     /**

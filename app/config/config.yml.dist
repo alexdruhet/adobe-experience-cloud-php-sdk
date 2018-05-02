@@ -1,7 +1,12 @@
+# Test parameters
+parameters:
+     test_email: user@tld.ext
+     new_profile_test_email: user-alt@tld.ext
 
 # Adobe marketing cloud API credentials
 adobe:
     campaign:
+        org_unit: ~ # the orgUnit values
         private_key: # path to the private key your created the api credentials with
         api_key: # given by Adobe (API Key, Client ID)
         tech_acct: # given by Adobe (Technical account ID, sub)

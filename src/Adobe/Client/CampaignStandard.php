@@ -91,6 +91,50 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
+     * @param array $data
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function createProfile(array $data)
+    {
+        // First we check if an email is given
+        if (!isset($data['email'])) {
+            throw new ClientException('To create a profile, an email is mandatory', 400);
+        }
+
+        // Then we check if the email si valid
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            throw new ClientException(sprintf('The given email %s is invalid', $data['email']), 400);
+        }
+
+        // So we can ensure the tld exists
+        $tld = substr(strrchr($data['email'], "@"), 1);
+        if (!checkdnsrr($tld, 'MX')) {
+            throw new ClientException(sprintf('The domain of the given email %s is invalid', $data['email']), 400);
+        }
+
+        // Then we lookup if a profile already exists for this email
+        $profile = $this->getProfileByEmail($data['email']);
+        if (count($profile->content)) {
+            throw new ClientException(sprintf('A profile already exists for %s', $data['email']), 409);
+        }
+
+        // We now add orgUnit data
+        $data['orgUnit'] = $this->orgUnit;
+
+        // If ok we proceed with the extended API
+        $this->setExtended();
+        $content = $this->setExtended()->post($this->majorEndpoints[0], $data);
+        $this->unsetExtended();
+
+        return $content;
+    }
+
+    /**
      * @param string $pKey
      * @param array  $payload
      *
@@ -105,6 +149,22 @@ class CampaignStandard extends AbstractBase
         $url = $this->majorEndpoints[0];
 
         return $this->patch("{$url}/{$pKey}", $payload);
+    }
+
+    /**
+     * @param string $pKey
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function deleteProfile($pKey)
+    {
+        $url = $this->majorEndpoints[0];
+
+        return $this->delete("{$url}/{$pKey}");
     }
 
     /**
@@ -151,7 +211,7 @@ class CampaignStandard extends AbstractBase
         foreach ($subscriptions->content as $subscription) {
             if ($subscription->service->name === $service->name) {
                 // TODO: find a better return
-                return (object) ['code' => 304, 'message' => 'This profile has already subscribe to the service'];
+                return (object) ['code' => 409, 'message' => 'This profile has already subscribe to the service'];
             }
         }
 
@@ -170,7 +230,7 @@ class CampaignStandard extends AbstractBase
     public function deleteSubscription(\stdClass $subscription)
     {
         if (!isset($subscription->href)) {
-            throw new ClientException('Invalid susbcription deletion', 400);
+            throw new ClientException('Invalid subscription submitted', 400);
         }
 
         return $this->delete($subscription->href);
