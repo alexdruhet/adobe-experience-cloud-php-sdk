@@ -25,6 +25,14 @@ trait CommonTrait
     protected $orgUnit;
 
     /**
+     * The orgUnit param
+     * It's an Adobe API bug workaround
+     *
+     * @var string
+     */
+    protected $orgUnitParam = 'orgUnit';
+
+    /**
      * Path to private key
      *
      * The private key filename or string literal to use to sign the token
@@ -260,6 +268,9 @@ trait CommonTrait
             $this->orgUnit = $config['org_unit'];
 
             // Optional parameters
+            if (isset($config['org_unit_param'])) {
+                $this->orgUnitParam = $config['org_unit_param'];
+            }
             if (isset($config['expiration'])) {
                 $this->expiration = (int) $config['expiration'];
             }
