@@ -5,10 +5,11 @@
  * Date: 06/04/2018
  * Time: 16:14
  */
-// @codingStandardsIgnoreStart
+
 $appRoot = __DIR__.'/..';
 ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
+require $appRoot.'/web/utils.php';
 
 use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\CampaignStandard;
@@ -19,27 +20,6 @@ $testEmail = null;
 $testServiceName = null;
 $newProfileTestEmail = null;
 $campaignClient = null;
-
-function getKey($arr, $key, $prefix = '_alt')
-{
-    if (isset($arr[$key])) {
-        return getKey($arr, $key.$prefix, $prefix);
-    }
-
-    return $key;
-}
-
-function execute($object, $method, array $args = [])
-{
-    global $data;
-    $key = getKey($data, get_class($object).'->'.$method);
-    try {
-        $data[$key]['success'] = call_user_func_array([$object, $method], $args);
-    } catch (Exception $e) {
-        $data[$key]['error'] = $e;
-    }
-}
-// @codingStandardsIgnoreEnd
 
 /**
  * Load and prepare config
