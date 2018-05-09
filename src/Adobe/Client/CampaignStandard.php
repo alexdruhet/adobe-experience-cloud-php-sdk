@@ -46,17 +46,27 @@ class CampaignStandard extends AbstractBase
             $url .= "/{$field}";
         }
 
-        return $this->get($url, ['_lineCount' => $limit]);
+        return $this->get($url, ['_lineCount' => $limit, $this->orgUnitParam => $this->orgUnit]);
     }
 
-//    public function getProfilesExtended($limit = 10, $field = null)
-//    {
-//        $this->setExtended();
-//        $content = $this->getProfiles($limit, $field);
-//        $this->unsetExtended();
-//
-//        return $content;
-//    }
+    /**
+     * @param int  $limit
+     * @param null $field
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getProfilesExtended($limit = 10, $field = null)
+    {
+        $this->setExtended();
+        $content = $this->getProfiles($limit, $field);
+        $this->unsetExtended();
+
+        return $content;
+    }
 
     /**
      * @param string $email
@@ -69,11 +79,11 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileByEmail($email)
     {
-        return $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email]);
+        return $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
     }
 
     /**
-     * @param string $businessId
+     * @param string $pKey
      *
      * @return mixed
      *
@@ -81,10 +91,10 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getProfileExtended($businessId)
+    public function getProfileExtended($pKey)
     {
         $this->setExtended();
-        $content = $this->get("{$this->majorEndpoints[0]}/{$businessId}");
+        $content = $this->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
         $this->unsetExtended();
 
         return $content;
@@ -124,10 +134,9 @@ class CampaignStandard extends AbstractBase
         }
 
         // We now add orgUnit data
-        $data['orgUnit'] = $this->orgUnit;
+        $data[$this->orgUnitParam] = $this->orgUnit;
 
         // If ok we proceed with the extended API
-        $this->setExtended();
         $content = $this->setExtended()->post($this->majorEndpoints[0], $data);
         $this->unsetExtended();
 
@@ -176,7 +185,7 @@ class CampaignStandard extends AbstractBase
      */
     public function getServices()
     {
-        return $this->get($this->majorEndpoints[1]);
+        return $this->get($this->majorEndpoints[1], [$this->orgUnitParam => $this->orgUnit]);
     }
 
 
@@ -191,7 +200,7 @@ class CampaignStandard extends AbstractBase
      */
     public function getSubscriptionsByProfile(\stdClass $profile)
     {
-        return $this->get($profile->content[0]->subscriptions->href);
+        return $this->get($profile->subscriptions->href);
     }
 
     /**
@@ -210,12 +219,11 @@ class CampaignStandard extends AbstractBase
         $subscriptions = $this->getSubscriptionsByProfile($profile);
         foreach ($subscriptions->content as $subscription) {
             if ($subscription->service->name === $service->name) {
-                // TODO: find a better return
-                return (object) ['code' => 409, 'message' => 'This profile has already subscribe to the service'];
+                throw new ClientException('The profile has already subscribed to the service', 409);
             }
         }
 
-        return $this->post("{$this->majorEndpoints[0]}/{$profile->content[0]->PKey}/subscriptions", ['service' => ['PKey' => $service->PKey]]);
+        return $this->post("{$this->majorEndpoints[0]}/{$profile->PKey}/subscriptions", ['service' => ['PKey' => $service->PKey]]);
     }
 
     /**

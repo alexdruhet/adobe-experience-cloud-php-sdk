@@ -98,6 +98,7 @@ class Request
     public function setDebug($debug)
     {
         if ($debug) {
+            @fclose($this->options['debug']);
             $this->options['debug'] = fopen('php://temp', 'r+');
         }
     }
@@ -144,9 +145,9 @@ class Request
         ) {
             $headers = '';
             foreach ($this->options['headers'] as $name => $value) {
-                $headers .= "-H \"{$name}: {$value}\"".\PHP_EOL;
+                $headers .= "-H \"{$name}: {$value}\" \\".\PHP_EOL;
             }
-            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl ".\PHP_EOL."-X {$this->method} {$this->options['base_uri']}{$this->url} ".\PHP_EOL.$headers;
+            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl ".\PHP_EOL."-X {$this->method} {$this->options['base_uri']}{$this->url} \\".\PHP_EOL.$headers;
             if (isset($this->options['body'])) {
                 $rawCurlRequest .= \PHP_EOL."-i -d \"{$this->options['body']}\"";
             }

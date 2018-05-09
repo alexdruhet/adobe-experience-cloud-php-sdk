@@ -5,135 +5,141 @@
  * Date: 06/04/2018
  * Time: 16:14
  */
-
+// @codingStandardsIgnoreStart
 $appRoot = __DIR__.'/..';
 ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 
 use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\CampaignStandard;
-use Pixadelic\Adobe\Exception\ClientException;
 use Symfony\Component\Yaml\Yaml;
 
 $data = [];
-$exceptions = [];
 $testEmail = null;
+$testServiceName = null;
 $newProfileTestEmail = null;
+$campaignClient = null;
 
-try {
-
-    /**
-     * Load and prepare config
-     */
-    $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
-    if (isset($config['adobe']['campaign']['private_key'])) {
-        $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
-    }
-    if (isset($config['parameters']['test_email'])) {
-        $testEmail = $config['parameters']['test_email'];
-    }
-    if (isset($config['parameters']['new_profile_test_email'])) {
-        $newProfileTestEmail = $config['parameters']['new_profile_test_email'];
+function getKey($arr, $key, $prefix = '_alt')
+{
+    if (isset($arr[$key])) {
+        return getKey($arr, $key.$prefix, $prefix);
     }
 
-    /**
-     * Getting access token
-     */
-    $accessToken = new AccessToken($config['adobe']['campaign']);
-    $accessToken->flush();
-    $data['AccessToken'] = $accessToken->get();
-
-    /**
-     * CampaignStandard client example
-     */
-    $campaignClient = new CampaignStandard($config['adobe']['campaign']);
-    $campaignClient->flush();
-    $data['CampaignStandard.getProfileMetadata'] = $campaignClient->getProfileMetadata();
-    //$data['CampaignStandard.getResource.postalAddress'] = $campaignClient->getResource('postalAddress');
-    $data['CampaignStandard.getProfiles'] = $campaignClient->getProfiles();
-    $data['CampaignStandard.getProfiles.email'] = $campaignClient->getProfiles(10, 'email');
-    $data['CampaignStandard.getProfiles.email.next10'] = $campaignClient->getNext($data['CampaignStandard.getProfiles.email']);
-
-//$data['CampaignStandard.profiles.extended'] = $campaignClient->getProfilesExtended();
-//$data['CampaignStandard.profiles.extended.email'] = $campaignClient->getProfilesExtended(10, 'email');
-//$data['CampaignStandard.profiles.extended.email.next10'] = $campaignClient->getNext($data['CampaignStandard.profiles.extended.email']);
-
-    $data['CampaignStandard.getProfileByEmail'] = $campaignClient->getProfileByEmail(end($data['CampaignStandard.getProfiles.email.next10']->content));
-
-    $data['CampaignStandard.getProfileByEmail.before'] = $campaignClient->getProfileByEmail($testEmail);
-    $data['CampaignStandard.updateProfile.processing'] = $campaignClient->updateProfile(
-        $data['CampaignStandard.getProfileByEmail.before']->content[0]->PKey,
-        ['preferredLanguage' => 'fr_fr']
-    );
-    $data['CampaignStandard.getProfileByEmail.after'] = $campaignClient->getProfileByEmail($testEmail);
-
-    $data['CampaignStandard.getSubscriptionsByProfile'] = $campaignClient->getSubscriptionsByProfile($data['CampaignStandard.getProfileByEmail.before']);
-    $data['CampaignStandard.getServices'] = $campaignClient->getServices();
-
-    $data['CampaignStandard.addSubscriptions.fail'] = $campaignClient->addSubscription(
-        $data['CampaignStandard.getProfileByEmail.before'],
-        $data['CampaignStandard.getServices']->content[0]
-    );
-
-    if (isset($data['CampaignStandard.getSubscriptionsByProfile']->content[0]) && is_object($data['CampaignStandard.getSubscriptionsByProfile']->content[0])) {
-        $data['CampaignStandard.deleteSubscription'] = $campaignClient->deleteSubscription($data['CampaignStandard.getSubscriptionsByProfile']->content[0]);
-    }
-
-    $data['CampaignStandard.addSubscriptions.success'] = $campaignClient->addSubscription(
-        $data['CampaignStandard.getProfileByEmail.before'],
-        $data['CampaignStandard.getServices']->content[0]
-    );
-
-    if (isset($data['CampaignStandard.updateProfile.after']->content[0]->businessId)) {
-        $data['CampaignStandard.profile.extended'] = $campaignClient->getProfileExtended($data['CampaignStandard.getProfileByEmail.after']->content[0]->businessId);
-    }
-
-    try {
-        $data['CampaignStandard.createProfile.errorCase1'] = $campaignClient->createProfile(['foo' => 'bar']);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-    try {
-        $data['CampaignStandard.createProfile.errorCase2'] = $campaignClient->createProfile(['email' => 'foo@bar']);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-    try {
-        $data['CampaignStandard.createProfile.errorCase3'] = $campaignClient->createProfile(['email' => 'foo@wwwwwwwwwww.xyz']);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-    try {
-        $data['CampaignStandard.createProfile.errorCase4'] = $campaignClient->createProfile(['email' => $testEmail]);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-    try {
-        $data['CampaignStandard.createProfile.success'] = $campaignClient->createProfile(['email' => $newProfileTestEmail]);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-    try {
-        $tmpProfile = $campaignClient->getProfileByEmail($newProfileTestEmail);
-        $data['CampaignStandard.deleteProfile.success'] = $campaignClient->deleteProfile($tmpProfile->content[0]->PKey);
-    } catch (ClientException $e2) {
-        $exceptions[] = $e2;
-    }
-} catch (Exception $e) {
-    $exceptions[] = $e;
+    return $key;
 }
+
+function execute($object, $method, array $args = [])
+{
+    global $data;
+    $key = getKey($data, get_class($object).'->'.$method);
+    try {
+        $data[$key]['success'] = call_user_func_array([$object, $method], $args);
+    } catch (Exception $e) {
+        $data[$key]['error'] = $e;
+    }
+}
+// @codingStandardsIgnoreEnd
+
+/**
+ * Load and prepare config
+ */
+$config = Yaml::parseFile($appRoot.'/app/config/config.yml');
+if (isset($config['adobe']['campaign']['private_key'])) {
+    $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
+}
+if (isset($config['parameters']['test_email'])) {
+    $testEmail = $config['parameters']['test_email'];
+}
+if (isset($config['parameters']['new_profile_test_email'])) {
+    $newProfileTestEmail = $config['parameters']['new_profile_test_email'];
+}
+if (isset($config['parameters']['test_service_name'])) {
+    $testServiceName = $config['parameters']['test_service_name'];
+}
+
+/**
+ * Getting access token
+ */
+$accessToken = new AccessToken($config['adobe']['campaign']);
+$accessToken->flush();
+
+execute($accessToken, 'get');
+
+/**
+ * CampaignStandard client example
+ */
+$campaignClient = new CampaignStandard($config['adobe']['campaign']);
+$campaignClient->flush();
+$prefix = get_class($campaignClient).'->';
+
+execute($campaignClient, 'getProfileMetadata', []);
+// getResource down!
+//execute($campaignClient, 'getResource', ['postalAddress']);
+execute($campaignClient, 'getProfiles');
+execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+execute($campaignClient, 'getProfiles', [10, 'email']);
+execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+execute($campaignClient, 'getProfilesExtended');
+execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended']['success']]);
+execute($campaignClient, 'getProfilesExtended', [10, 'email']);
+execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended_alt']['success']]);
+execute($campaignClient, 'getProfileByEmail', [end($data[$prefix.'getNext_alt_alt_alt']['success']->content)]);
+execute($campaignClient, 'getProfileByEmail', [$testEmail]);
+$testProfile = $data[$prefix.'getProfileByEmail_alt']['success']->content[0];
+execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['preferredLanguage' => 'fr_fr']]);
+execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['foo' => 'bar']]);
+execute($campaignClient, 'getServices');
+$testService = null;
+foreach ($data[$prefix.'getServices']['success']->content as $service) {
+    if ($service->name === $testServiceName) {
+        $testService = $service;
+        break;
+    }
+}
+execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+$testSubscription = null;
+foreach ($data[$prefix.'getSubscriptionsByProfile']['success']->content as $subscription) {
+    if ($subscription->serviceName === $testServiceName) {
+        $testSubscription = $subscription;
+        break;
+    }
+}
+execute($campaignClient, 'deleteSubscription', [$testSubscription]);
+execute($campaignClient, 'getProfileExtended', [$testProfile->PKey]);
+execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
+execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
+execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
+execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
+execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
+$newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
+execute($campaignClient, 'addSubscription', [$newProfileTest->content[0], $testService]);
+execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest->content[0]]);
+$newProfileSubscription = null;
+foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']->content as $subscription) {
+    if ($subscription->serviceName === $testServiceName) {
+        $newProfileSubscription = $subscription;
+        break;
+    }
+}
+execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
+execute($campaignClient, 'deleteProfile', [$newProfileTest->content[0]->PKey]);
 
 ?><!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Adobe Experience Cloud PHP SDK examples</title>
+    <title>Adobe Experience Cloud PHP SDK test run</title>
     <style>
         body {
             font-family: sans-serif;
-            background-color: #fafafa;
             line-height: 1.5;
-            color: #222;
+            /*background-color: #fafafa;*/
+            /*color: #222;*/
+            background-color: #3A3636;
+            color: #d1d1d1;
         }
 
         h1 {
@@ -161,6 +167,18 @@ try {
             display: block;
         }
 
+        .success {
+            margin-bottom: 1px;
+        }
+
+        .check {
+            color: greenyellow;
+        }
+
+        .ballot {
+            color: gold;
+        }
+
         .error {
             padding: 1rem 1.5rem;
             margin-bottom: 1px;
@@ -179,6 +197,10 @@ try {
         }
 
         .error h1 {
+            padding: 0 0 .5rem 0;
+        }
+
+        .error div {
             padding: 0 0 1rem 0;
             float: left;
             max-width: 70%;
@@ -196,30 +218,25 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/rainbow.min.css">
 </head>
 <body>
+<header><h1>Adobe Experience Cloud PHP SDK test run</h1></header>
 <?php foreach ($data as $key => $value) : ?>
-    <section>
-        <h1 class="toggler"><?php print $key ?></h1>
-        <div class="togglable">
-            <pre><code><?php print var_export($value, true); ?></code></pre>
-        </div>
-    </section>
-<?php endforeach; ?>
-<?php if (count($exceptions)) : ?>
-    <?php foreach ($exceptions as $exception) : ?>
-        <section class="error">
-            <strong><?php print $exception->getCode(); ?></strong>
-            <h1><?php print $exception->getMessage(); ?></h1>
-            <pre><?php print $exception->getTraceAsString(); ?></pre>
+    <?php if (isset($data[$key]['success'])) : ?>
+        <section class="success">
+            <h1 class="toggler"><span class="check">✔</span> <?php print $key ?></h1>
+            <div class="togglable">
+                <pre><code><?php print var_export($data[$key]['success'], true); ?></code></pre>
+            </div>
         </section>
-    <?php endforeach; ?>
-<?php endif; ?>
-<?php /* if (isset($e)) : ?>
-    <section class="error">
-        <strong><?php print $e->getCode(); ?></strong>
-        <h1><?php print $e->getMessage(); ?></h1>
-        <pre><?php print $e->getTraceAsString(); ?></pre>
-    </section>
-<?php endif; */ ?>
+    <?php endif; ?>
+    <?php if (isset($data[$key]['error'])) : ?>
+        <section class="error">
+            <strong><?php print $data[$key]['error']->getCode(); ?></strong>
+            <div><h1><span class="ballot">✘</span> <?php print $key ?></h1>
+                <?php print $data[$key]['error']->getMessage(); ?></div>
+            <pre><?php print $data[$key]['error']->getTraceAsString(); ?></pre>
+        </section>
+    <?php endif; ?>
+<?php endforeach; ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.5.2/randomColor.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
 <script>
@@ -232,8 +249,9 @@ try {
             let toggler     = togglable.parentElement.querySelector(".toggler"),
                 togglerHtml = toggler.innerHTML,
                 color       = randomColor({
-                    luminosity: "light",
-                    format: "hsla"
+                    luminosity: "dark",
+                    format: "hsla",
+                    hue: "green"
                 });
 
             toggler.style.backgroundColor   = color;
