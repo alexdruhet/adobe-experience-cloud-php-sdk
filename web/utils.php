@@ -5,7 +5,7 @@
  * Date: 09/05/2018
  * Time: 17:31
  */
-
+// @codingStandardsIgnoreStart
 /**
  * Class Utils
  */
@@ -21,7 +21,7 @@ class Utils
     public static function getKey(array $arr, $key, $prefix = '_alt')
     {
         if (isset($arr[$key])) {
-            return getKey($arr, $key.$prefix, $prefix);
+            return self::getKey($arr, $key.$prefix, $prefix);
         }
 
         return $key;
@@ -35,7 +35,7 @@ class Utils
     public static function execute($object, $method, array $args = [])
     {
         global $data;
-        $key = getKey($data, get_class($object).'->'.$method);
+        $key = self::getKey($data, get_class($object).'->'.$method);
         try {
             $data[$key]['success'] = call_user_func_array([$object, $method], $args);
         } catch (Exception $e) {
@@ -43,3 +43,4 @@ class Utils
         }
     }
 }
+// @codingStandardsIgnoreEnd

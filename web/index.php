@@ -44,7 +44,7 @@ if (isset($config['parameters']['test_service_name'])) {
 $accessToken = new AccessToken($config['adobe']['campaign']);
 $accessToken->flush();
 
-execute($accessToken, 'get');
+Utils::execute($accessToken, 'get');
 
 /**
  * CampaignStandard client example
@@ -53,23 +53,22 @@ $campaignClient = new CampaignStandard($config['adobe']['campaign']);
 $campaignClient->flush();
 $prefix = get_class($campaignClient).'->';
 
-execute($campaignClient, 'getProfileMetadata', []);
-// getResource down!
-//execute($campaignClient, 'getResource', ['postalAddress']);
-execute($campaignClient, 'getProfiles');
-execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
-execute($campaignClient, 'getProfiles', [10, 'email']);
-execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
-execute($campaignClient, 'getProfilesExtended');
-execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended']['success']]);
-execute($campaignClient, 'getProfilesExtended', [10, 'email']);
-execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended_alt']['success']]);
-execute($campaignClient, 'getProfileByEmail', [end($data[$prefix.'getNext_alt_alt_alt']['success']->content)]);
-execute($campaignClient, 'getProfileByEmail', [$testEmail]);
+Utils::execute($campaignClient, 'getProfileMetadata', []);
+Utils::execute($campaignClient, 'getResource', ['postalAddress']);
+Utils::execute($campaignClient, 'getProfiles');
+Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
+Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+Utils::execute($campaignClient, 'getProfilesExtended');
+Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended']['success']]);
+Utils::execute($campaignClient, 'getProfilesExtended', [10, 'email']);
+Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended_alt']['success']]);
+Utils::execute($campaignClient, 'getProfileByEmail', [end($data[$prefix.'getNext_alt_alt_alt']['success']->content)]);
+Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
 $testProfile = $data[$prefix.'getProfileByEmail_alt']['success']->content[0];
-execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['preferredLanguage' => 'fr_fr']]);
-execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['foo' => 'bar']]);
-execute($campaignClient, 'getServices');
+Utils::execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['preferredLanguage' => 'fr_fr']]);
+Utils::execute($campaignClient, 'updateProfile', [$testProfile->PKey, ['foo' => 'bar']]);
+Utils::execute($campaignClient, 'getServices');
 $testService = null;
 foreach ($data[$prefix.'getServices']['success']->content as $service) {
     if ($service->name === $testServiceName) {
@@ -77,9 +76,9 @@ foreach ($data[$prefix.'getServices']['success']->content as $service) {
         break;
     }
 }
-execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
 $testSubscription = null;
 foreach ($data[$prefix.'getSubscriptionsByProfile']['success']->content as $subscription) {
     if ($subscription->serviceName === $testServiceName) {
@@ -87,16 +86,16 @@ foreach ($data[$prefix.'getSubscriptionsByProfile']['success']->content as $subs
         break;
     }
 }
-execute($campaignClient, 'deleteSubscription', [$testSubscription]);
-execute($campaignClient, 'getProfileExtended', [$testProfile->PKey]);
-execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
-execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
-execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
-execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
-execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
+Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
+Utils::execute($campaignClient, 'getProfileExtended', [$testProfile->PKey]);
+Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
+Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
+Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
+Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
+Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
 $newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
-execute($campaignClient, 'addSubscription', [$newProfileTest->content[0], $testService]);
-execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest->content[0]]);
+Utils::execute($campaignClient, 'addSubscription', [$newProfileTest->content[0], $testService]);
+Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest->content[0]]);
 $newProfileSubscription = null;
 foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']->content as $subscription) {
     if ($subscription->serviceName === $testServiceName) {
@@ -104,8 +103,8 @@ foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']->content as $
         break;
     }
 }
-execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
-execute($campaignClient, 'deleteProfile', [$newProfileTest->content[0]->PKey]);
+Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
+Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest->content[0]->PKey]);
 
 ?><!DOCTYPE html>
 <html>
