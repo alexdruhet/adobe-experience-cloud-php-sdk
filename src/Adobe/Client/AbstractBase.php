@@ -120,31 +120,31 @@ abstract class AbstractBase
         return $this->metadatas[$index];
     }
 
-    ///**
-    // * Get json resource representation as described in Adobe documentation.
-    // * Actually the endpoint api does not match with the documentation, so we can't use it yet.
-    // *
-    // * @see https://docs.campaign.adobe.com/doc/standard/en/api/ACS_API.html#resources-representation
-    // *
-    // * @param string $resource
-    // *
-    // * @return mixed
-    // *
-    // * @throws \GuzzleHttp\Exception\GuzzleException
-    // * @throws \Pixadelic\Adobe\Exception\ClientException
-    // * @throws \Psr\SimpleCache\InvalidArgumentException
-    // */
-    //public function getResource($resource)
-    //{
-    //    $index = $this->getCurrentEndpointIndex().'/'.$resource;
-    //    if (!isset($this->resource[$index])) {
-    //        $this->validateResource($resource);
-    //        $resourceName = \ucfirst($resource);
-    //        $this->resources[$index] = $this->get("{$this->majorEndpoints[$this->currentMajorEndpointIndex]}.json", ['_lineCount' => 1]);
-    //    }
-//
-    //    return $this->resources[$index];
-    //}
+    /**
+     * Get json resource representation as described in Adobe documentation.
+     * Actually the endpoint api does not match with the documentation, so we can't use it yet.
+     *
+     * @see https://docs.campaign.adobe.com/doc/standard/en/api/ACS_API.html#resources-representation
+     *
+     * @param string $resource
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getResource($resource)
+    {
+        $index = $this->getCurrentEndpointIndex().'/'.$resource;
+        if (!isset($this->resource[$index])) {
+            $this->validateResource($resource);
+            $resourceName = \ucfirst($resource);
+            $this->resources[$index] = $this->get("{$this->majorEndpoints[$this->currentMajorEndpointIndex]}/{$resourceName}.json", ['_lineCount' => 1]);
+        }
+
+        return $this->resources[$index];
+    }
 
     /**
      * Get next page of a results set
