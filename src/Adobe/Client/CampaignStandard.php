@@ -42,7 +42,7 @@ class CampaignStandard extends AbstractBase
     {
         $metadata = $this->getProfileMetadata();
         $url = $this->majorEndpoints[0];
-        if ($field && \property_exists($metadata->content, $field)) {
+        if ($field && isset($metadata['content'][$field])) {
             $url .= "/{$field}";
         }
 
@@ -129,12 +129,15 @@ class CampaignStandard extends AbstractBase
 
         // Then we lookup if a profile already exists for this email
         $profile = $this->getProfileByEmail($data['email']);
-        if (count($profile->content)) {
+        if (count($profile['content'])) {
             throw new ClientException(sprintf('A profile already exists for %s', $data['email']), 409);
         }
 
         // We now add orgUnit data
         $data[$this->orgUnitParam] = $this->orgUnit;
+
+        // We validate our payload
+        $this->validateResources($data);
 
         // If ok we proceed with the extended API
         $content = $this->setExtended()->post($this->majorEndpoints[0], $data);
@@ -161,7 +164,7 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
-     * @param string $pKey
+     * @param string $pKeyÒ
      *
      * @return mixed
      *
@@ -190,7 +193,7 @@ class CampaignStandard extends AbstractBase
 
 
     /**
-     * @param \stdClass $profile
+     * @param array $profile
      *
      * @return mixed
      *
@@ -198,14 +201,14 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getSubscriptionsByProfile(\stdClass $profile)
+    public function getSubscriptionsByProfile(array $profile)
     {
-        return $this->get($profile->subscriptions->href);
+        return $this->get($profile['subscriptions']['href']);
     }
 
     /**
-     * @param \stdClass $profile
-     * @param \stdClass $service
+     * @param array $profile
+     * @param array $service
      *
      * @return mixed
      *
@@ -213,21 +216,21 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function addSubscription(\stdClass $profile, \stdClass $service)
+    public function addSubscription(array $profile, array $service)
     {
         // First we check if the profile already subscribe to the service
         $subscriptions = $this->getSubscriptionsByProfile($profile);
-        foreach ($subscriptions->content as $subscription) {
-            if ($subscription->service->name === $service->name) {
+        foreach ($subscriptions['content'] as $subscription) {
+            if ($subscription['service']['name'] === $service['name']) {
                 throw new ClientException('The profile has already subscribed to the service', 409);
             }
         }
 
-        return $this->post("{$this->majorEndpoints[0]}/{$profile->PKey}/subscriptions", ['service' => ['PKey' => $service->PKey]]);
+        return $this->post("{$this->majorEndpoints[0]}/{$profile['PKey']}/subscriptions", ['service' => ['PKey' => $service['PKey']]]);
     }
 
     /**
-     * @param \stdClass $subscription
+     * @param array $subscription
      *
      * @return mixed
      *
@@ -235,13 +238,13 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function deleteSubscription(\stdClass $subscription)
+    public function deleteSubscription(array $subscription)
     {
-        if (!isset($subscription->href)) {
+        if (!isset($subscription['href'])) {
             throw new ClientException('Invalid subscription submitted', 400);
         }
 
-        return $this->delete($subscription->href);
+        return $this->delete($subscription['href']);
     }
 
     /**

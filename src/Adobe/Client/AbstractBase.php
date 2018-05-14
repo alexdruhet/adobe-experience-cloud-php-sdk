@@ -28,7 +28,7 @@ abstract class AbstractBase
     protected $config;
 
     /**
-     * @var \stdClass
+     * @var array
      */
     protected $accessToken;
 
@@ -149,7 +149,7 @@ abstract class AbstractBase
     /**
      * Get next page of a results set
      *
-     * @param \stdClass $response
+     * @param array $response
      *
      * @return bool|mixed
      *
@@ -157,10 +157,10 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getNext(\stdClass $response)
+    public function getNext(array $response)
     {
-        if (\property_exists($response, 'next') && \property_exists($response->next, 'href')) {
-            return $this->get($response->next->href);
+        if (isset($response['next']) && isset($response['next']['href'])) {
+            return $this->get($response['next']['href']);
         }
 
         return false;
@@ -219,7 +219,7 @@ abstract class AbstractBase
     }
 
     /**
-     * @return mixed|null|\Psr\Http\Message\StreamInterface|\stdClass
+     * @return mixed|null|\Psr\Http\Message\StreamInterface|\array
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\AccessTokenException
@@ -263,13 +263,11 @@ abstract class AbstractBase
     protected function prepareHeaders()
     {
         $accessToken = $this->getAccessToken();
-        // @codingStandardsIgnoreStart
         $this->headers = [
-            'Authorization' => sprintf('%s %s', ucfirst($accessToken->token_type), $accessToken->access_token),
+            'Authorization' => sprintf('%s %s', ucfirst($accessToken['token_type']), $accessToken['access_token']),
             'Cache-Control' => 'no-cache',
             'X-Api-Key' => $this->config['api_key'],
         ];
-        // @codingStandardsIgnoreEnd
     }
 
     /**
@@ -324,12 +322,13 @@ abstract class AbstractBase
      */
     protected function validateResource($resource, $value = null)
     {
-        $metadata = $this->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
-        if (!\property_exists($metadata->content, $resource)) {
+        $metadata = $this->setExtended()->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
+        $this->unsetExtended();
+        if (!isset($metadata['content'][$resource])) {
             throw new ClientException("{$resource} does not exists", 400);
         }
-        if ($value && \property_exists($metadata->content->{$resource}, 'values')
-            && !\property_exists($metadata->content->{$resource}->values, $value)
+        if ($value && isset($metadata['content'][$resource]['values'])
+            && !isset($metadata['content'][$resource]['values'][$value])
         ) {
             throw new ClientException("{$value} is not a valid value for {$resource}", 400);
         }
@@ -379,16 +378,16 @@ abstract class AbstractBase
             }
             $code = $response->getStatusCode();
             $reason = $response->getReasonPhrase();
-            $content = \json_decode($response->getBody()->getContents());
+            $content = \json_decode($response->getBody()->getContents(), true);
 
             if (!$content) {
-                $content = new \stdClass();
-                $content->code = $code;
-                $content->message = $reason;
+                $content = [];
+                $content['code'] = $code;
+                $content['message'] = $reason;
             }
 
             if ($this->debug) {
-                $content->debug = $this->getDebugInfo();
+                $content['debug'] = $this->getDebugInfo();
             }
 
             if (400 <= $code) {

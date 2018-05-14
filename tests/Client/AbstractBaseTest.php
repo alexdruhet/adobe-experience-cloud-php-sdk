@@ -59,8 +59,8 @@ class AbstractBaseTest extends TestCase
             false
         );
 
-        $metadataStub = new \stdClass();
-        $metadataStub->test = true;
+        $metadataStub = [];
+        $metadataStub['test'] = true;
         $resource = 'stub';
 
         $mock->expects($this->any())
@@ -87,17 +87,17 @@ class AbstractBaseTest extends TestCase
             false
         );
 
-        $responseStub = new \stdClass();
-        $responseStub->test = true;
-        $obj = new \stdClass();
-        $obj->next = new \stdClass();
-        $obj->next->href = 'test_url';
+        $responseStub = [];
+        $responseStub['test'] = true;
+        $arr = [];
+        $arr['next'] = [];
+        $arr['next']['href'] = 'test_url';
 
         $mock->expects($this->any())
             ->method('getNext')
-            ->with($this->equalTo($obj))
+            ->with($this->equalTo($arr))
             ->will($this->returnValue($responseStub));
 
-        $this->assertSame($mock->getNext($obj), $responseStub);
+        $this->assertSame($mock->getNext($arr), $responseStub);
     }
 }

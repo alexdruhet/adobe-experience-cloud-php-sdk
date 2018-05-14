@@ -85,28 +85,24 @@ class AccessToken
         }
         $status = $response->getStatusCode();
         $body = $response->getBody();
-        $content = json_decode($body->getContents());
+        $content = json_decode($body->getContents(), true);
 
         // Error handling
         if (200 !== $status) {
             $message = self::ERROR_MESSAGES['get'];
-            if (isset($content->error)) {
-                // @codingStandardsIgnoreStart
-                $message = $content->error.\PHP_EOL.$content->error_description;
-                // @codingStandardsIgnoreEnd
+            if (isset($content['error'])) {
+                $message = $content['error'].\PHP_EOL.$content['error_description'];
             }
             throw new AccessTokenException($message, $status);
         }
 
         // Add debug info to response if necessary
         if ($this->debug) {
-            $content->debug = $this->debugInfo;
+            $content['debug'] = $this->debugInfo;
         }
 
         // Caching response
-        // @codingStandardsIgnoreStart
-        $this->setCache($content, $content->expires_in);
-        // @codingStandardsIgnoreEnd
+        $this->setCache($content, $content['expires_in']);
 
         return $content;
     }
