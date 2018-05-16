@@ -151,6 +151,16 @@ trait CommonTrait
     protected $debugInfo;
 
     /**
+     * @var bool
+     */
+    protected $enableLog = false;
+
+    /**
+     * @var string
+     */
+    protected $logDir;
+
+    /**
      * Decides whether we are running
      * our calls against production
      * or staging instance.
@@ -274,6 +284,16 @@ trait CommonTrait
             if (isset($config['expiration'])) {
                 $this->expiration = (int) $config['expiration'];
             }
+            if (isset($config['log'])) {
+                if (isset($config['log']['enable'])) {
+                    $this->enableLog = (bool) $config['log']['enable'];
+                }
+                if (isset($config['log']['dir']) && $config['log']['dir']) {
+                    $this->setLogDir($config['log']['dir']);
+                } else {
+                    $this->logDir = null;
+                }
+            }
             if (isset($config['cache'])) {
                 if (isset($config['cache']['enable'])) {
                     $this->enableCache = (bool) $config['cache']['enable'];
@@ -305,6 +325,32 @@ trait CommonTrait
             ->initDebug()
             ->initCache()
             ->addDebugInfo('config', $config);
+    }
+
+    public function log($message, $namespace = 'debug')
+    {
+        if ($this->enableLog && $this->logDir && \file_exists($this->logDir)) {
+            $logFilePath = "{$this->logDir}/aec-php-sdk.log";
+            if (!\file_exists($logFilePath)) {
+                $handle = fopen($logFilePath, "x+");
+                \fclose($handle);
+            }
+            $handle = fopen($logFilePath, "a+");
+            $date = date("D M d H:i:s Y");
+            $ip = $_SERVER['REMOTE_ADDR'];
+            $line = "[{$date}] [{$namespace}] [{$ip}] $message".\PHP_EOL;
+            \fwrite($handle, $line);
+            \fclose($handle);
+        }
+    }
+
+    protected function setLogDir($path)
+    {
+        if (!$path || !\file_exists($path) || !\is_writable($path)) {
+            // first we try to get the php error_log path
+            $path = pathinfo(ini_get('error_log'), PATHINFO_DIRNAME);
+        }
+        $this->logDir = $path;
     }
 
     /**
@@ -344,6 +390,11 @@ trait CommonTrait
     {
         if ($this->debug) {
             $this->debugInfo->{$name} = $value;
+            if (\is_string($value)) {
+                $this->log($name.' - '.$value);
+            } else {
+                $this->log($name.' - '.json_encode($value));
+            }
         }
 
         return $this;
