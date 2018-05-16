@@ -248,6 +248,126 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
+     * @param string $eventId
+     * @param array  $payload
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function sendEvent($eventId, array $payload)
+    {
+        return $this->post("mcAdobe/{$eventId}", $payload);
+    }
+
+    /**
+     * @param string $eventId
+     * @param string $eventPKey
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getEvent($eventId, $eventPKey)
+    {
+        return $this->get("mcAdobe/{$eventId}/{$eventPKey}");
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function startWorkflow($id)
+    {
+        return $this->executeWorkflowCommand($id, 'start');
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function pauseWorkflow($id)
+    {
+        return $this->executeWorkflowCommand($id, 'pause');
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function resumeWorkflow($id)
+    {
+        return $this->executeWorkflowCommand($id, 'resume');
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function stopWorkflow($id)
+    {
+        return $this->executeWorkflowCommand($id, 'stop');
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getWorkflowActivity($id)
+    {
+        return $this->get("workflow/execution/{$id}");
+    }
+
+    /**
+     * @param string $id
+     * @param string $command
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function executeWorkflowCommand($id, $command)
+    {
+        $commands = ['start', 'pause', 'resume', 'stop'];
+        if (!\in_array(\strtolower($command), $commands)) {
+            throw new ClientException(sprintf('Invalid command submitted: %s', $command), 400);
+        }
+
+        return $this->post("workflow/execution/{$id}/commands", ['method' => $command]);
+    }
+
+    /**
      * Endpoints declaration
      */
     protected function setEndpoints()
