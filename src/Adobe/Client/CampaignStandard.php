@@ -164,7 +164,7 @@ class CampaignStandard extends AbstractBase
     }
 
     /**
-     * @param string $pKeyÒ
+     * @param string $pKey
      *
      * @return mixed
      *

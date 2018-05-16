@@ -20,6 +20,9 @@ adobe:
         exchange_endpoint: # given by Adobe
         debug: false # default value, will add a debug node to response if set to true
         stage: true # default value, will add adobe staging suffix to tenant if set to true
+        log:
+            enable: true
+            dir: ~ # Absolute path to log directory, default to php error_log if available
         cache:
             enable: true # default value
             dir: ~ # default to php tmp
