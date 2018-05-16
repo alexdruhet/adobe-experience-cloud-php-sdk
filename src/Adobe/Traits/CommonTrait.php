@@ -327,6 +327,10 @@ trait CommonTrait
             ->addDebugInfo('config', $config);
     }
 
+    /**
+     * @param string $message
+     * @param string $namespace
+     */
     public function log($message, $namespace = 'debug')
     {
         if ($this->enableLog && $this->logDir && \file_exists($this->logDir)) {
@@ -337,13 +341,16 @@ trait CommonTrait
             }
             $handle = fopen($logFilePath, "a+");
             $date = date("D M d H:i:s Y");
-            $ip = $_SERVER['REMOTE_ADDR'];
+            $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : php_sapi_name();
             $line = "[{$date}] [{$namespace}] [{$ip}] $message".\PHP_EOL;
             \fwrite($handle, $line);
             \fclose($handle);
         }
     }
 
+    /**
+     * @param string $path
+     */
     protected function setLogDir($path)
     {
         if (!$path || !\file_exists($path) || !\is_writable($path)) {
@@ -382,7 +389,7 @@ trait CommonTrait
 
     /**
      * @param string $name
-     * @param string $value
+     * @param mixed  $value
      *
      * @return $this
      */
@@ -393,7 +400,7 @@ trait CommonTrait
             if (\is_string($value)) {
                 $this->log($name.' - '.$value);
             } else {
-                $this->log($name.' - '.json_encode($value));
+                $this->log($name.': '.\PHP_EOL.json_encode($value));
             }
         }
 
