@@ -25,7 +25,27 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileMetadata()
     {
-        return $this->getMetadata($this->majorEndpoints[0]);
+        $this->setExtended();
+        $content = $this->getMetadata($this->majorEndpoints[0]);
+        $this->unsetExtended();
+
+        return $content;
+    }
+
+    /**
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getProfileResources()
+    {
+        $this->setExtended();
+        $content = $this->getResources($this->majorEndpoints[0]);
+        $this->unsetExtended();
+
+        return $content;
     }
 
     /**
@@ -46,12 +66,15 @@ class CampaignStandard extends AbstractBase
             $url .= "/{$field}";
         }
 
-        return $this->get($url, ['_lineCount' => $limit, $this->orgUnitParam => $this->orgUnit]);
+        $this->setExtended();
+        $content = $this->get($url, ['_lineCount' => $limit, $this->orgUnitParam => $this->orgUnit]);
+        $this->unsetExtended();
+
+        return $content;
     }
 
     /**
-     * @param int  $limit
-     * @param null $field
+     * @param string $pKey
      *
      * @return mixed
      *
@@ -59,10 +82,10 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getProfilesExtended($limit = 10, $field = null)
+    public function getProfile($pKey)
     {
         $this->setExtended();
-        $content = $this->getProfiles($limit, $field);
+        $content = $this->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
         $this->unsetExtended();
 
         return $content;
@@ -79,22 +102,8 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileByEmail($email)
     {
-        return $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
-    }
-
-    /**
-     * @param string $pKey
-     *
-     * @return mixed
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
-     */
-    public function getProfileExtended($pKey)
-    {
         $this->setExtended();
-        $content = $this->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
+        $content = $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
         $this->unsetExtended();
 
         return $content;
@@ -177,6 +186,38 @@ class CampaignStandard extends AbstractBase
         $url = $this->majorEndpoints[0];
 
         return $this->delete("{$url}/{$pKey}");
+    }
+
+    /**
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getServiceMetadata()
+    {
+        $this->setExtended();
+        $content = $this->getMetadata($this->majorEndpoints[1]);
+        $this->unsetExtended();
+
+        return $content;
+    }
+
+    /**
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getServiceResources()
+    {
+        $this->setExtended();
+        $content = $this->getResources($this->majorEndpoints[1]);
+        $this->unsetExtended();
+
+        return $content;
     }
 
     /**
@@ -347,6 +388,35 @@ class CampaignStandard extends AbstractBase
         return $this->get("workflow/execution/{$id}");
     }
 
+//    /**
+//     * @param $payload
+//     *
+//     * @return mixed
+//     * @throws \GuzzleHttp\Exception\GuzzleException
+//     * @throws \Pixadelic\Adobe\Exception\ClientException
+//     * @throws \Psr\SimpleCache\InvalidArgumentException
+//     */
+//    public function sendGDPRrequest($payload)
+//    {
+//        $this->currentEndpointIndex = 1;
+//        $content = $this->post('', $payload);
+//        $this->currentEndpointIndex = 0;
+//
+//        return $content;
+//    }
+//
+//    public function getGDPRrequest()
+//    {
+//        $this->currentEndpointIndex = 1;
+//        $this->currentEndpointIndex = 0;
+//    }
+//
+//    public function getGDPRData()
+//    {
+//        $this->currentEndpointIndex = 1;
+//        $this->currentEndpointIndex = 0;
+//    }
+
     /**
      * @param string $id
      * @param string $command
@@ -372,7 +442,7 @@ class CampaignStandard extends AbstractBase
      */
     protected function setEndpoints()
     {
-        $this->endpoints = ['campaign/profileAndServices'];
+        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool'];
     }
 
     /**

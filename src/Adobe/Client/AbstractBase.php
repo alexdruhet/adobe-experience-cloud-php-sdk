@@ -122,28 +122,29 @@ abstract class AbstractBase
 
     /**
      * Get json resource representation as described in Adobe documentation.
-     * Actually the endpoint api does not match with the documentation, so we can't use it yet.
      *
      * @see https://docs.campaign.adobe.com/doc/standard/en/api/ACS_API.html#resources-representation
      *
-     * @param string $resource
+     * @param string $majorEndpoint
      *
-     * @return mixed
+     * @return array|mixed
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getResource($resource)
+    public function getResources($majorEndpoint)
     {
-        $index = $this->getCurrentEndpointIndex().'/'.$resource;
-        if (!isset($this->resource[$index])) {
-            $this->validateResource($resource);
-            $resourceName = \ucfirst($resource);
-            $this->resources[$index] = $this->get("{$this->majorEndpoints[$this->currentMajorEndpointIndex]}/{$resourceName}.json", ['_lineCount' => 1]);
+        if (!count($this->resources) || !isset($this->resources[$majorEndpoint])) {
+            $this->setExtended();
+            $response = $this->get("{$majorEndpoint}.json", ['_lineCount' => 1]);
+            $this->unsetExtended();
+            if (isset($response['content'])) {
+                $this->resources[$majorEndpoint] = $response['content'];
+            }
         }
 
-        return $this->resources[$index];
+        return $this->resources[$majorEndpoint];
     }
 
     /**
@@ -322,6 +323,9 @@ abstract class AbstractBase
      */
     protected function validateResource($resource, $value = null)
     {
+        if (!$resource) {
+            return;
+        }
         $metadata = $this->setExtended()->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
         $this->unsetExtended();
         if (!isset($metadata['content'][$resource])) {
