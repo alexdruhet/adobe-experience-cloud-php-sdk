@@ -24,7 +24,14 @@ $campaignClient = null;
 /**
  * Load and prepare config
  */
-$config = Yaml::parseFile($appRoot.'/app/config/config.yml');
+// @codingStandardsIgnoreStart
+if (isset($HTTP_GET_VARS['prod'])) {
+    $config = Yaml::parseFile($appRoot.'/app/config/config_prod.yml');
+    $env = 'production';
+} else {
+    $config = Yaml::parseFile($appRoot.'/app/config/config.yml');
+    $env = 'staging';
+}
 if (isset($config['adobe']['campaign']['private_key'])) {
     $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
 }
@@ -37,6 +44,7 @@ if (isset($config['parameters']['new_profile_test_email'])) {
 if (isset($config['parameters']['test_service_name'])) {
     $testServiceName = $config['parameters']['test_service_name'];
 }
+// @codingStandardsIgnoreEnd
 
 /**
  * Getting access token
@@ -53,66 +61,67 @@ $campaignClient = new CampaignStandard($config['adobe']['campaign']);
 $campaignClient->flush();
 $prefix = get_class($campaignClient).'->';
 
-Utils::execute($campaignClient, 'getProfileMetadata', []);
-Utils::execute($campaignClient, 'getResource', ['postalAddress']);
-Utils::execute($campaignClient, 'getProfiles');
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
-Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
-Utils::execute($campaignClient, 'getProfilesExtended');
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended']['success']]);
-Utils::execute($campaignClient, 'getProfilesExtended', [10, 'email']);
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended_alt']['success']]);
-Utils::execute($campaignClient, 'getProfileByEmail', [end($data[$prefix.'getNext_alt_alt_alt']['success']['content'])]);
-Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
-$testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
-Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['preferredLanguage' => 'fr_fr']]);
-Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
-Utils::execute($campaignClient, 'getServices');
-$testService = null;
-foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
-    if ($service['name'] === $testServiceName) {
-        $testService = $service;
-        break;
-    }
-}
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
-$testSubscription = null;
-foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
-    if ($subscription['serviceName'] === $testServiceName) {
-        $testSubscription = $subscription;
-        break;
-    }
-}
-Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
-Utils::execute($campaignClient, 'getProfileExtended', [$testProfile['PKey']]);
-Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
-Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
-$newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
-if ($newProfileTest) {
-    Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
-    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
-    $newProfileSubscription = null;
-    foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']['content'] as $subscription) {
-        if ($subscription['serviceName'] === $testServiceName) {
-            $newProfileSubscription = $subscription;
-            break;
-        }
-    }
-    Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
-    Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
-}
+//Utils::execute($campaignClient, 'getProfileMetadata', []);
+Utils::execute($campaignClient, 'getProfileResources');
+Utils::execute($campaignClient, 'getServiceResources');
+//Utils::execute($campaignClient, 'getProfiles');
+//Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+//Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
+//Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+//Utils::execute($campaignClient, 'getProfilesExtended');
+//Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended']['success']]);
+//Utils::execute($campaignClient, 'getProfilesExtended', [10, 'email']);
+//Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfilesExtended_alt']['success']]);
+//Utils::execute($campaignClient, 'getProfileByEmail', [end($data[$prefix.'getNext_alt_alt_alt']['success']['content'])]);
+//Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
+//$testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
+//Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['preferredLanguage' => 'fr_fr']]);
+//Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
+//Utils::execute($campaignClient, 'getServices');
+//$testService = null;
+//foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
+//    if ($service['name'] === $testServiceName) {
+//        $testService = $service;
+//        break;
+//    }
+//}
+//Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+//Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+//Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+//$testSubscription = null;
+//foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
+//    if ($subscription['serviceName'] === $testServiceName) {
+//        $testSubscription = $subscription;
+//        break;
+//    }
+//}
+//Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
+//Utils::execute($campaignClient, 'getProfileExtended', [$testProfile['PKey']]);
+//Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
+//$newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
+//if ($newProfileTest) {
+//    Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
+//    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
+//    $newProfileSubscription = null;
+//    foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']['content'] as $subscription) {
+//        if ($subscription['serviceName'] === $testServiceName) {
+//            $newProfileSubscription = $subscription;
+//            break;
+//        }
+//    }
+//    Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
+//    Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
+//}
 
 ?><!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Adobe Experience Cloud PHP SDK test run</title>
+    <title>Adobe Experience Cloud PHP SDK test run [<?php print $env ?>]</title>
     <style>
         body {
             font-family: sans-serif;
@@ -199,7 +208,7 @@ if ($newProfileTest) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/rainbow.min.css">
 </head>
 <body>
-<header><h1>Adobe Experience Cloud PHP SDK test run</h1></header>
+<header><h1>Adobe Experience Cloud PHP SDK test run <span class="env"><?php print $env ?></span></h1></header>
 <?php foreach ($data as $key => $value) : ?>
     <?php if (isset($data[$key]['success'])) : ?>
         <section class="success">

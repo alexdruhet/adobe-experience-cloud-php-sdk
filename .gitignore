@@ -5,7 +5,7 @@
 .idea
 
 # Working files
-config.yml
+config*.yml
 phpunit.xml
 app/ssl/
 vendor/
