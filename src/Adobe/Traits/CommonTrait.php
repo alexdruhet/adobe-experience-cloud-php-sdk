@@ -86,6 +86,7 @@ trait CommonTrait
      * @var string
      */
     protected $tenant;
+    protected $tenantBase;
 
     /**
      * Audience
@@ -271,7 +272,7 @@ trait CommonTrait
             $this->techAcct = $config['tech_acct'];
             $this->organization = $config['organization'];
             $this->clientSecret = $config['client_secret'];
-            $this->tenant = $config['tenant'];
+            $this->tenant = $this->tenantBase = $config['tenant'];
             $this->accessEndpoint = $config['access_endpoint'];
             $this->exchangeEndpoint = $config['exchange_endpoint'];
             $this->audience = $config['audience'];

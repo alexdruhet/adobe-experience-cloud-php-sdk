@@ -6,6 +6,7 @@
  * Time: 17:31
  */
 // @codingStandardsIgnoreStart
+
 /**
  * Class Utils
  */
@@ -31,6 +32,8 @@ class Utils
      * @param object $object
      * @param string $method
      * @param array  $args
+     *
+     * @return mixed
      */
     public static function execute($object, $method, array $args = [])
     {
@@ -41,6 +44,8 @@ class Utils
         } catch (Exception $e) {
             $data[$key]['error'] = $e;
         }
+
+        return $key;
     }
 }
 // @codingStandardsIgnoreEnd

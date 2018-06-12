@@ -6,6 +6,8 @@
  * Time: 16:14
  */
 
+// @codingStandardsIgnoreStart
+
 $appRoot = __DIR__.'/..';
 ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
@@ -15,16 +17,26 @@ use Pixadelic\Adobe\Api\AccessToken;
 use Pixadelic\Adobe\Client\CampaignStandard;
 use Symfony\Component\Yaml\Yaml;
 
+function getEvtStatus()
+{
+    global $evtStatus, $campaignClient, $testEventName, $evtPKey, $prefix, $data;
+    sleep(2);
+    $key = Utils::execute($campaignClient, 'getEvent', [$testEventName, $evtPKey]);
+    $evtStatus = $data[$key]['success']['status'];
+}
+
+/**
+ * Load and prepare config
+ */
 $data = [];
 $testEmail = null;
 $testServiceName = null;
 $newProfileTestEmail = null;
 $campaignClient = null;
+$testEventName = null;
+$testEventPayload = [];
 
-/**
- * Load and prepare config
- */
-// @codingStandardsIgnoreStart
+
 if (isset($HTTP_GET_VARS['prod'])) {
     $config = Yaml::parseFile($appRoot.'/app/config/config_prod.yml');
     $env = 'production';
@@ -44,7 +56,24 @@ if (isset($config['parameters']['new_profile_test_email'])) {
 if (isset($config['parameters']['test_service_name'])) {
     $testServiceName = $config['parameters']['test_service_name'];
 }
-// @codingStandardsIgnoreEnd
+if (isset($config['parameters']['test_event_name'])) {
+    $testEventName = $config['parameters']['test_event_name'];
+    $testEventPayload = [
+        'email' => $newProfileTestEmail,
+        'ctx' => [
+            'senderemail' => $testEmail,
+            "AC_language" => "default",
+            "html" => '<span class="test">html test</span>',
+            "searchlink" => "https://booking.iflya380.com/en?adultCount=2&class=0&departuredate=2018-08-10&destination=KWE&origin=TLS&returndate=2018-08-17&submit=1",
+            "price" => "2003 €",
+            "returndate" => "2018-08-17",
+            "departuredate" => "2018-08-10",
+            "destination" => "KWE",
+            "origin" => "TLS",
+            "sendername" => "John Doe",
+        ],
+    ];
+}
 
 /**
  * Getting access token
@@ -64,6 +93,21 @@ $prefix = get_class($campaignClient).'->';
 //Utils::execute($campaignClient, 'getProfileMetadata', []);
 Utils::execute($campaignClient, 'getProfileResources');
 Utils::execute($campaignClient, 'getServiceResources');
+
+Utils::execute($campaignClient, 'getEventMetadata', [$testEventName]);
+Utils::execute($campaignClient, 'sendEvent', [$testEventName, $testEventPayload]);
+$evtPKey = $data[$prefix.'sendEvent']['success']['PKey'];
+$evtStatus = null;
+$iMax = 5;
+$i = 0;
+while (!in_array($evtStatus, ['processed', 'ignored', 'deliveryFailed', 'tooOld'])) {
+    getEvtStatus();
+    if ($i++ === $iMax) {
+        break;
+    }
+}
+getEvtStatus();
+
 //Utils::execute($campaignClient, 'getProfiles');
 //Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
 //Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
@@ -117,6 +161,7 @@ Utils::execute($campaignClient, 'getServiceResources');
 //    Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
 //}
 
+// @codingStandardsIgnoreEnd
 ?><!DOCTYPE html>
 <html>
 <head>
