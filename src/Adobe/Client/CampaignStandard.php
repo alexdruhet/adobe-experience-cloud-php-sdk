@@ -300,7 +300,12 @@ class CampaignStandard extends AbstractBase
      */
     public function sendEvent($eventId, array $payload)
     {
-        return $this->post("mcAdobe/{$eventId}", $payload);
+        $initialEndpointAddress = $this->currentEndpointIndex;
+        $this->currentEndpointIndex = 2;
+        $response = $this->post($eventId, $payload);
+        $this->currentEndpointIndex = $initialEndpointAddress;
+
+        return $response;
     }
 
     /**
@@ -315,7 +320,31 @@ class CampaignStandard extends AbstractBase
      */
     public function getEvent($eventId, $eventPKey)
     {
-        return $this->get("mcAdobe/{$eventId}/{$eventPKey}");
+        $initialEndpointAddress = $this->currentEndpointIndex;
+        $this->currentEndpointIndex = 2;
+        $response = $this->get("{$eventId}/{$eventPKey}");
+        $this->currentEndpointIndex = $initialEndpointAddress;
+
+        return $response;
+    }
+
+    /**
+     * @param string $eventId
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function getEventMetadata($eventId)
+    {
+        $initialEndpointAddress = $this->currentEndpointIndex;
+        $this->currentEndpointIndex = 2;
+        $response = $this->getMetadata($eventId);
+        $this->currentEndpointIndex = $initialEndpointAddress;
+
+        return $response;
     }
 
     /**
@@ -442,7 +471,7 @@ class CampaignStandard extends AbstractBase
      */
     protected function setEndpoints()
     {
-        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool'];
+        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool', "campaign/mc{$this->tenantBase}"];
     }
 
     /**
