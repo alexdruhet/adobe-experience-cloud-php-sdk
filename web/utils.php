@@ -48,4 +48,14 @@ class Utils
         return $key;
     }
 }
+
+function getEvtStatus()
+{
+    global $evtStatus, $campaignClient, $testEventName, $evtPKey, $prefix, $data;
+    sleep(2);
+    $key = Utils::execute($campaignClient, 'getEvent', [$testEventName, $evtPKey]);
+    if (isset($data[$key]['success']) && isset($data[$key]['success']['status'])) {
+        $evtStatus = $data[$key]['success']['status'];
+    }
+}
 // @codingStandardsIgnoreEnd

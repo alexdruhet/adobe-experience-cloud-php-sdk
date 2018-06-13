@@ -122,19 +122,10 @@ class CampaignStandard extends AbstractBase
     {
         // First we check if an email is given
         if (!isset($data['email'])) {
-            throw new ClientException('To create a profile, an email is mandatory', 400);
+            throw new ClientException('To create a profile, giving an email is mandatory', 400);
         }
 
-        // Then we check if the email si valid
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            throw new ClientException(sprintf('The given email %s is invalid', $data['email']), 400);
-        }
-
-        // So we can ensure the tld exists
-        $tld = substr(strrchr($data['email'], "@"), 1);
-        if (!checkdnsrr($tld, 'MX')) {
-            throw new ClientException(sprintf('The domain of the given email %s is invalid', $data['email']), 400);
-        }
+        $this->validateEmail($data['email']);
 
         // Then we lookup if a profile already exists for this email
         $profile = $this->getProfileByEmail($data['email']);
@@ -300,6 +291,7 @@ class CampaignStandard extends AbstractBase
      */
     public function sendEvent($eventId, array $payload)
     {
+        $this->validateEventResources($eventId, $payload);
         $initialEndpointAddress = $this->currentEndpointIndex;
         $this->currentEndpointIndex = 2;
         $response = $this->post($eventId, $payload);
@@ -345,6 +337,27 @@ class CampaignStandard extends AbstractBase
         $this->currentEndpointIndex = $initialEndpointAddress;
 
         return $response;
+    }
+
+    /**
+     * @param string $eventId
+     * @param array  $payload
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    public function validateEventResources($eventId, array $payload)
+    {
+        $metadata = $this->getEventMetadata($eventId);
+        if (!isset($metadata['content']['ctx'])) {
+            throw new ClientException(sprintf('Invalid $eventId submitted: %s', $eventId), 400);
+        }
+        if (isset($payload['email'])) {
+            $this->validateEmail($payload['email']);
+        }
+        $this->validateResources($payload, $metadata);
+        $this->validateResources($payload['ctx'], $metadata['content']['ctx']);
     }
 
     /**

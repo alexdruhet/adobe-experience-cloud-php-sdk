@@ -316,18 +316,21 @@ abstract class AbstractBase
      *
      * @param string $resource
      * @param null   $value
+     * @param null   $metadata
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function validateResource($resource, $value = null)
+    protected function validateResource($resource, $value = null, $metadata = null)
     {
         if (!$resource) {
             return;
         }
-        $metadata = $this->setExtended()->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
-        $this->unsetExtended();
+        if (!$metadata) {
+            $metadata = $this->setExtended()->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
+            $this->unsetExtended();
+        }
         if (!isset($metadata['content'][$resource])) {
             throw new ClientException("{$resource} does not exists", 400);
         }
@@ -343,15 +346,30 @@ abstract class AbstractBase
      * is known by the current endpoint
      *
      * @param array $resources
+     * @param null  $metadata
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function validateResources(array $resources)
+    protected function validateResources(array $resources, $metadata = null)
     {
         foreach ($resources as $resource => $value) {
-            $this->validateResource($resource, $value);
+            $this->validateResource($resource, $value, $metadata);
+        }
+    }
+
+    protected function validateEmail($email)
+    {
+        // Then we check if the email si valid
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new ClientException(sprintf('The given email %s is invalid', $email), 400);
+        }
+
+        // So we can ensure the tld exists
+        $tld = substr(strrchr($email, "@"), 1);
+        if (!checkdnsrr($tld, 'MX')) {
+            throw new ClientException(sprintf('The domain of the given email %s is invalid', $email), 400);
         }
     }
 
