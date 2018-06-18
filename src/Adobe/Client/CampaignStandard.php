@@ -25,11 +25,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileMetadata()
     {
-        $this->setExtended();
-        $content = $this->getMetadata($this->majorEndpoints[0]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->getMetadata($this->majorEndpoints[0]);
     }
 
     /**
@@ -41,11 +39,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileResources()
     {
-        $this->setExtended();
-        $content = $this->getResources($this->majorEndpoints[0]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->getResources($this->majorEndpoints[0]);
     }
 
     /**
@@ -66,11 +62,9 @@ class CampaignStandard extends AbstractBase
             $url .= "/{$field}";
         }
 
-        $this->setExtended();
-        $content = $this->get($url, ['_lineCount' => $limit, $this->orgUnitParam => $this->orgUnit]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->get($url, ['_lineCount' => $limit, $this->orgUnitParam => $this->orgUnit]);
     }
 
     /**
@@ -84,11 +78,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfile($pKey)
     {
-        $this->setExtended();
-        $content = $this->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
     }
 
     /**
@@ -102,11 +94,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getProfileByEmail($email)
     {
-        $this->setExtended();
-        $content = $this->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
     }
 
     /**
@@ -140,10 +130,9 @@ class CampaignStandard extends AbstractBase
         $this->validateResources($data);
 
         // If ok we proceed with the extended API
-        $content = $this->setExtended()->post($this->majorEndpoints[0], $data);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->post($this->majorEndpoints[0], $data);
     }
 
     /**
@@ -158,6 +147,7 @@ class CampaignStandard extends AbstractBase
      */
     public function updateProfile($pKey, array $payload)
     {
+        $this->currentEndpointIndex = 0;
         $url = $this->majorEndpoints[0];
 
         return $this->patch("{$url}/{$pKey}", $payload);
@@ -174,6 +164,7 @@ class CampaignStandard extends AbstractBase
      */
     public function deleteProfile($pKey)
     {
+        $this->currentEndpointIndex = 0;
         $url = $this->majorEndpoints[0];
 
         return $this->delete("{$url}/{$pKey}");
@@ -188,11 +179,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getServiceMetadata()
     {
-        $this->setExtended();
-        $content = $this->getMetadata($this->majorEndpoints[1]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->getMetadata($this->majorEndpoints[1]);
     }
 
     /**
@@ -204,11 +193,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getServiceResources()
     {
-        $this->setExtended();
-        $content = $this->getResources($this->majorEndpoints[1]);
-        $this->unsetExtended();
+        $this->currentEndpointIndex = 0;
 
-        return $content;
+        return $this->setExtended()->getResources($this->majorEndpoints[1]);
     }
 
     /**
@@ -220,6 +207,8 @@ class CampaignStandard extends AbstractBase
      */
     public function getServices()
     {
+        $this->currentEndpointIndex = 0;
+
         return $this->get($this->majorEndpoints[1], [$this->orgUnitParam => $this->orgUnit]);
     }
 
@@ -235,6 +224,8 @@ class CampaignStandard extends AbstractBase
      */
     public function getSubscriptionsByProfile(array $profile)
     {
+        $this->currentEndpointIndex = 0;
+
         return $this->get($profile['subscriptions']['href']);
     }
 
@@ -258,6 +249,8 @@ class CampaignStandard extends AbstractBase
             }
         }
 
+        $this->currentEndpointIndex = 0;
+
         return $this->post("{$this->majorEndpoints[0]}/{$profile['PKey']}/subscriptions", ['service' => ['PKey' => $service['PKey']]]);
     }
 
@@ -276,6 +269,8 @@ class CampaignStandard extends AbstractBase
             throw new ClientException('Invalid subscription submitted', 400);
         }
 
+        $this->currentEndpointIndex = 0;
+
         return $this->delete($subscription['href']);
     }
 
@@ -292,12 +287,9 @@ class CampaignStandard extends AbstractBase
     public function sendEvent($eventId, array $payload)
     {
         $this->validateEventResources($eventId, $payload);
-        $initialEndpointAddress = $this->currentEndpointIndex;
         $this->currentEndpointIndex = 2;
-        $response = $this->post($eventId, $payload);
-        $this->currentEndpointIndex = $initialEndpointAddress;
 
-        return $response;
+        return $this->post($eventId, $payload);
     }
 
     /**
@@ -312,12 +304,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getEvent($eventId, $eventPKey)
     {
-        $initialEndpointAddress = $this->currentEndpointIndex;
         $this->currentEndpointIndex = 2;
-        $response = $this->get("{$eventId}/{$eventPKey}");
-        $this->currentEndpointIndex = $initialEndpointAddress;
 
-        return $response;
+        return $this->get("{$eventId}/{$eventPKey}");
     }
 
     /**
@@ -331,12 +320,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getEventMetadata($eventId)
     {
-        $initialEndpointAddress = $this->currentEndpointIndex;
         $this->currentEndpointIndex = 2;
-        $response = $this->getMetadata($eventId);
-        $this->currentEndpointIndex = $initialEndpointAddress;
 
-        return $response;
+        return $this->getMetadata($eventId);
     }
 
     /**
@@ -475,6 +461,8 @@ class CampaignStandard extends AbstractBase
         if (!\in_array(\strtolower($command), $commands)) {
             throw new ClientException(sprintf('Invalid command submitted: %s', $command), 400);
         }
+
+        $this->currentEndpointIndex = 0;
 
         return $this->post("workflow/execution/{$id}/commands", ['method' => $command]);
     }

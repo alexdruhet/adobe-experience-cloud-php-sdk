@@ -359,6 +359,11 @@ abstract class AbstractBase
         }
     }
 
+    /**
+     * @param string $email
+     *
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     */
     protected function validateEmail($email)
     {
         // Then we check if the email si valid
