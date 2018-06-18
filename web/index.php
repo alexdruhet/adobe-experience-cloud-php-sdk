@@ -27,7 +27,7 @@ $testEventName = null;
 $testEventPayload = [];
 
 
-if (isset($HTTP_GET_VARS['prod'])) {
+if (isset($_GET['prod'])) {
     $config = Yaml::parseFile($appRoot.'/app/config/config_prod.yml');
     $env = 'production';
 } else {

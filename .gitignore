@@ -12,5 +12,7 @@ vendor/
 *.log
 cache
 
+.ignore*
+
 # We are dealing with a library so we ignore composer.lock
 composer.lock
