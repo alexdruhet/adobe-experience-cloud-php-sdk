@@ -33,6 +33,14 @@ trait CommonTrait
     protected $orgUnitParam = 'orgUnit';
 
     /**
+     * The collection of the org unit
+     * custom resources
+     *
+     * @var array
+     */
+    protected $orgUnitResources = [];
+
+    /**
      * Path to private key
      *
      * The private key filename or string literal to use to sign the token
@@ -281,6 +289,9 @@ trait CommonTrait
             // Optional parameters
             if (isset($config['org_unit_param'])) {
                 $this->orgUnitParam = $config['org_unit_param'];
+            }
+            if (isset($config['org_unit_resources'])) {
+                $this->orgUnitResources = $config['org_unit_resources'];
             }
             if (isset($config['expiration'])) {
                 $this->expiration = (int) $config['expiration'];
