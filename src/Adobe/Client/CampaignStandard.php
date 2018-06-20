@@ -26,8 +26,29 @@ class CampaignStandard extends AbstractBase
     public function getProfileMetadata()
     {
         $this->currentEndpointIndex = 0;
+        $customResources = [];
 
-        return $this->setExtended()->getMetadata($this->majorEndpoints[0]);
+        if (count($this->orgUnitResources)) {
+            foreach ($this->orgUnitResources as $orgUnitResource) {
+                $customResources[$orgUnitResource] = $this->setExtended()->getMetadata($orgUnitResource);
+            }
+        }
+
+        $profileMetadata = $this->setExtended()->getMetadata($this->majorEndpoints[0]);
+
+        // We restrict the profile metadata
+        // to the specified custom resources
+        foreach ($profileMetadata['content'] as $key => $value) {
+            if (preg_match('/^cus/', $key) && isset($value['resTarget'])) {
+                if (!isset($customResources[$value['resTarget']])) {
+                    unset($profileMetadata['content'][$key]);
+                } else {
+                    $profileMetadata['content'][$key] = $customResources[$value['resTarget']];
+                }
+            }
+        }
+
+        return $profileMetadata;
     }
 
     /**
@@ -80,7 +101,20 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 0;
 
-        return $this->setExtended()->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
+        $profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/{$pKey}", [$this->orgUnitParam => $this->orgUnit]);
+
+        if ($profile && isset($profile['content'][0])) {
+            // Load custom resources data
+            foreach ($profile['content'][0] as $key => $value) {
+                if (preg_match('/^cus/', $key)) {
+                    if (isset($profile['content'][0][$key]['href'])) {
+                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
+                    }
+                }
+            }
+        }
+
+        return $profile;
     }
 
     /**
@@ -96,11 +130,24 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 0;
 
-        return $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
+        $profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
+
+        if ($profile && isset($profile['content'][0])) {
+            // Load custom resources data
+            foreach ($profile['content'][0] as $key => $value) {
+                if (preg_match('/^cus/', $key)) {
+                    if (isset($profile['content'][0][$key]['href'])) {
+                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
+                    }
+                }
+            }
+        }
+
+        return $profile;
     }
 
     /**
-     * @param array $data
+     * @param array $payload
      *
      * @return mixed
      *
@@ -108,31 +155,31 @@ class CampaignStandard extends AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function createProfile(array $data)
+    public function createProfile(array $payload)
     {
         // First we check if an email is given
-        if (!isset($data['email'])) {
+        if (!isset($payload['email'])) {
             throw new ClientException('To create a profile, giving an email is mandatory', 400);
         }
 
-        $this->validateEmail($data['email']);
+        $this->validateEmail($payload['email']);
 
         // Then we lookup if a profile already exists for this email
-        $profile = $this->getProfileByEmail($data['email']);
+        $profile = $this->getProfileByEmail($payload['email']);
         if (count($profile['content'])) {
-            throw new ClientException(sprintf('A profile already exists for %s', $data['email']), 409);
+            throw new ClientException(sprintf('A profile already exists for %s', $payload['email']), 409);
         }
 
         // We now add orgUnit data
-        $data[$this->orgUnitParam] = $this->orgUnit;
+        $payload[$this->orgUnitParam] = $this->orgUnit;
 
         // We validate our payload
-        $this->validateResources($data);
+        $this->validateResources($payload);
 
         // If ok we proceed with the extended API
         $this->currentEndpointIndex = 0;
 
-        return $this->setExtended()->post($this->majorEndpoints[0], $data);
+        return $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
     }
 
     /**
@@ -150,7 +197,7 @@ class CampaignStandard extends AbstractBase
         $this->currentEndpointIndex = 0;
         $url = $this->majorEndpoints[0];
 
-        return $this->patch("{$url}/{$pKey}", $payload);
+        return $this->patch("{$url}/{$pKey}", $payload, $this->getProfileMetadata());
     }
 
     /**

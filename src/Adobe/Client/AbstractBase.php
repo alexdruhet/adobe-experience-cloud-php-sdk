@@ -85,6 +85,12 @@ abstract class AbstractBase
      */
     protected $useExtended = false;
 
+
+    /**
+     * @var array
+     */
+    protected $validationData = [];
+
     /**
      * AbstractBase constructor.
      *
@@ -311,34 +317,106 @@ abstract class AbstractBase
     }
 
     /**
-     * Test if a single resource is
-     * known by the current endpoint
+     * Test a single property
+     * against available metadatas
      *
-     * @param string $resource
+     * @param string $property
      * @param null   $value
      * @param null   $metadata
+     * @param bool   $throwException
+     *
+     * @return bool
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function validateResource($resource, $value = null, $metadata = null)
+    protected function validateResource($property, $value = null, $metadata = null, $throwException = true)
     {
-        if (!$resource) {
-            return;
+        // No property, no processing
+        if (!$property) {
+            return true;
         }
+
+        // No given metadata, load default one from the
+        // current major endpoint
         if (!$metadata) {
             $metadata = $this->setExtended()->getMetadata($this->majorEndpoints[$this->currentMajorEndpointIndex]);
             $this->unsetExtended();
         }
-        if (!isset($metadata['content'][$resource])) {
-            throw new ClientException("{$resource} does not exists", 400);
-        }
-        if ($value && isset($metadata['content'][$resource]['values'])
-            && !isset($metadata['content'][$resource]['values'][$value])
+
+        $return = true;
+        $content = $metadata['content'];
+
+        if (!isset($content[$property])) {
+            $subReturn = false;
+
+            // Try to find the property in custom resources
+            foreach ($content as $key => $nestedMetadata) {
+                if (preg_match('/^cus/', $key)) {
+                    // We can potentially find the nested property metadata
+                    // since we load the linked property metadata in getMetadata
+                    if (isset($nestedMetadata['compatibleResources'])) {
+                        $compatibleResources = $nestedMetadata['compatibleResources'];
+                        $resourceName = array_shift(array_keys($compatibleResources));
+
+                        // Proceed only if the property is owned by our organisation unit
+                        if (in_array($resourceName, $this->orgUnitResources)) {
+                            $subReturn = $this->validateResource($property, $value, $nestedMetadata, false);
+
+                            // Break if the property is find in a nested metadata
+                            if ($subReturn) {
+                                // Mark property has valid
+                                $this->validationData[$property]['valid'] = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // If the property is not found either in the main
+            // and the nested metadata we register an error
+            if (!$subReturn && !isset($this->validationData[$property]['valid'])) {
+                $message = "{$property} property is not found in {$metadata['name']} resource";
+
+                if ($throwException) {
+                    throw new ClientException($message, 400);
+                }
+
+                $error = ['message' => $message];
+                $this->validationData[$property]['errors'][] = $error;
+                $return = false;
+            }
+        } elseif ($value
+            && isset($content[$property]['values'])
+            && !isset($content[$property]['values'][$value])
         ) {
-            throw new ClientException("{$value} is not a valid value for {$resource}", 400);
+            // Invalidate the property
+            if (isset($this->validationData[$property]['valid'])) {
+                unset($this->validationData[$property]['valid']);
+            }
+
+            $message = "{$value} is not a valid value for {$property}";
+            $possibleValues = $content[$property]['values'];
+            unset($possibleValues['__Invalid_value__']);
+            $data = ['values' => array_keys($possibleValues)];
+
+            if ($throwException) {
+                throw new ClientException($message, 400, $data);
+            }
+
+            $return = false;
+            $this->validationData[$property]['errors'][] = ['message' => $message, 'data' => $data];
         }
+
+        // Cleanup the property validation entries if
+        // the process has marked it valid
+        if (isset($this->validationData[$property]['valid'])) {
+            unset($this->validationData[$property]);
+        }
+
+        return $return;
     }
 
     /**
@@ -347,15 +425,70 @@ abstract class AbstractBase
      *
      * @param array $resources
      * @param null  $metadata
+     * @param bool  $throwException
+     *
+     * @return array|string
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function validateResources(array $resources, $metadata = null)
+    protected function validateResources(array $resources, $metadata = null, $throwException = true)
     {
+        $this->validationData = [];
+        $return = true;
         foreach ($resources as $resource => $value) {
-            $this->validateResource($resource, $value, $metadata);
+            $return = $this->validateResource($resource, $value, $metadata, false);
+        }
+
+        if ($throwException && !$return) {
+            $validationData = $this->validationData;
+            $this->validationData = [];
+            throw new ClientException('The resource is invalid', 400, $validationData);
+        }
+
+        return $return;
+    }
+
+    /**
+     * @param array $payload
+     * @param array $metadata
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function preparePayload(array &$payload, array $metadata)
+    {
+        $content = $metadata['content'];
+        $compatibleResources = $metadata['compatibleResources'];
+        foreach ($compatibleResources as $resourceName => $resourceValue) {
+            if (ctype_alnum($resourceName)) {
+                break;
+            }
+        }
+        foreach ($payload as $property => $value) {
+            if (!isset($content[$property])) {
+                // Try to find the property in custom resources
+                foreach ($content as $key => $nestedMetadata) {
+                    if (preg_match('/^cus/', $key)) {
+                        // We can potentially find the nested property metadata
+                        // since we load the linked property metadata in getMetadata
+                        if (isset($nestedMetadata['compatibleResources'])) {
+                            $nestedCompatibleResources = $nestedMetadata['compatibleResources'];
+                            $nestedResourceName = array_shift(array_keys($nestedCompatibleResources));
+
+                            // Proceed only if the property is owned by our organisation unit
+                            if (in_array($nestedResourceName, $this->orgUnitResources)) {
+                                $this->preparePayload($payload, $nestedMetadata);
+                            }
+                        }
+                    }
+                }
+            } else {
+                unset($payload[$property]);
+                $payload["resource:{$resourceName}"][$property] = $value;
+            }
         }
     }
 
@@ -449,6 +582,7 @@ abstract class AbstractBase
      *
      * @param string $url
      * @param array  $payload
+     * @param null   $metadata
      *
      * @return mixed
      *
@@ -456,9 +590,12 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function post($url, array $payload)
+    protected function post($url, array $payload, $metadata = null)
     {
-        //$this->validateResources($payload);
+        if ($metadata) {
+            $this->validateResources($payload, $metadata);
+            $this->preparePayload($payload, $metadata);
+        }
 
         return $this->doRequest('POST', $url, \json_encode($payload));
     }
@@ -468,6 +605,7 @@ abstract class AbstractBase
      *
      * @param string $url
      * @param array  $payload
+     * @param null   $metadata
      *
      * @return mixed
      *
@@ -475,11 +613,19 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function patch($url, array $payload)
+    protected function patch($url, array $payload, $metadata = null)
     {
-        $this->validateResources($payload);
+        $this->validateResources($payload, $metadata);
+        $this->preparePayload($payload, $metadata);
 
-        return $this->doRequest('PATCH', $url, \json_encode($payload));
+        $response = [];
+        foreach ($payload as $resource => $resourcePayload) {
+            $response[] = ['PATCH', $url, \json_encode($resourcePayload)];
+            // @TODO: run these requests with the right url...
+            //$response[] = $this->doRequest('PATCH', $url, \json_encode($resourcePayload));
+        }
+
+        return $response;
     }
 
     /**
