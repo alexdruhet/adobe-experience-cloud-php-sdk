@@ -331,7 +331,7 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function validateResource($property, $value = null, $metadata = null, $throwException = true)
+    protected function validateResourceRaw($property, $value = null, $metadata = null, $throwException = true)
     {
         // No property, no processing
         if (!$property) {
@@ -362,7 +362,7 @@ abstract class AbstractBase
 
                         // Proceed only if the property is owned by our organisation unit
                         if (in_array($resourceName, $this->orgUnitResources)) {
-                            $subReturn = $this->validateResource($property, $value, $nestedMetadata, false);
+                            $subReturn = $this->validateResourceRaw($property, $value, $nestedMetadata, false);
 
                             // Break if the property is find in a nested metadata
                             if ($subReturn) {
@@ -377,7 +377,10 @@ abstract class AbstractBase
 
             // If the property is not found either in the main
             // and the nested metadata we register an error
-            if (!$subReturn && !isset($this->validationData[$property]['valid'])) {
+            if (!$subReturn
+                && !isset($this->validationData[$property]['valid'])
+                && !isset($this->validationData[$property]['value_errors'])
+            ) {
                 $message = "{$property} property is not found in {$metadata['name']} resource";
 
                 if ($throwException) {
@@ -392,10 +395,9 @@ abstract class AbstractBase
             && isset($content[$property]['values'])
             && !isset($content[$property]['values'][$value])
         ) {
-            // Invalidate the property
-            if (isset($this->validationData[$property]['valid'])) {
-                unset($this->validationData[$property]['valid']);
-            }
+            // Mark property has valid
+            // will be cleaned up later in the process
+            $this->validationData[$property]['valid'] = true;
 
             $message = "{$value} is not a valid value for {$property}";
             $possibleValues = $content[$property]['values'];
@@ -406,15 +408,67 @@ abstract class AbstractBase
                 throw new ClientException($message, 400, $data);
             }
 
-            $return = false;
-            $this->validationData[$property]['errors'][] = ['message' => $message, 'data' => $data];
+            $this->validationData[$property]['value_errors'][] = ['message' => $message, 'data' => $data];
         }
 
         // Cleanup the property validation entries if
         // the process has marked it valid
         if (isset($this->validationData[$property]['valid'])) {
-            unset($this->validationData[$property]);
+            $return = true;
         }
+
+        if (!isset($this->validationData[$property]['errors'])
+            && !isset($this->validationData[$property]['value_errors'])
+        ) {
+            $return = true;
+        } elseif (isset($this->validationData[$property]['value_errors'])) {
+            $return = false;
+        }
+
+        return $return;
+    }
+
+    /**
+     * @param string $property
+     */
+    protected function validationDataCleanup($property)
+    {
+        // Cleanup the property validation entries if
+        // the process has marked it valid
+        if (isset($this->validationData[$property]['valid'])) {
+            unset($this->validationData[$property]['errors']);
+            unset($this->validationData[$property]['valid']);
+        }
+
+        if (!isset($this->validationData[$property]['errors'])
+            && !isset($this->validationData[$property]['value_errors'])
+        ) {
+            unset($this->validationData[$property]);
+        } elseif (isset($this->validationData[$property]['value_errors'])) {
+            $this->validationData[$property]['errors'] = $this->validationData[$property]['value_errors'];
+            unset($this->validationData[$property]['value_errors']);
+        }
+    }
+
+    /**
+     * Test a single property
+     * against available metadatas
+     *
+     * @param string $property
+     * @param null   $value
+     * @param null   $metadata
+     * @param bool   $throwException
+     *
+     * @return bool
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function validateResource($property, $value = null, $metadata = null, $throwException = true)
+    {
+        $return = $this->validateResourceRaw($property, $value, $metadata, $throwException);
+        $this->validationDataCleanup($property);
 
         return $return;
     }
@@ -427,7 +481,7 @@ abstract class AbstractBase
      * @param null  $metadata
      * @param bool  $throwException
      *
-     * @return array|string
+     * @return bool
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
@@ -438,10 +492,13 @@ abstract class AbstractBase
         $this->validationData = [];
         $return = true;
         foreach ($resources as $resource => $value) {
-            $return = $this->validateResource($resource, $value, $metadata, false);
+            if (!$this->validateResourceRaw($resource, $value, $metadata, false)) {
+                $return = false;
+            }
+            $this->validationDataCleanup($resource);
         }
 
-        if ($throwException && !$return) {
+        if ($throwException && count($this->validationData)) {
             $validationData = $this->validationData;
             $this->validationData = [];
             throw new ClientException('The resource is invalid', 400, $validationData);
@@ -451,14 +508,16 @@ abstract class AbstractBase
     }
 
     /**
-     * @param array $payload
-     * @param array $metadata
+     * @param array  $payload
+     * @param array  $metadata
+     * @param string $resourceLink
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function preparePayload(array &$payload, array $metadata)
+    // @TODO: prevent case of duplicate property names between resources
+    protected function preparePayload(array &$payload, array $metadata, $resourceLink = null)
     {
         $content = $metadata['content'];
         $compatibleResources = $metadata['compatibleResources'];
@@ -480,14 +539,76 @@ abstract class AbstractBase
 
                             // Proceed only if the property is owned by our organisation unit
                             if (in_array($nestedResourceName, $this->orgUnitResources)) {
-                                $this->preparePayload($payload, $nestedMetadata);
+                                // @TODO: Automaticaly add custom key mandatory fields if required
+                                // even if the metadata does not provide support for this feature
+                                $this->preparePayload($payload, $nestedMetadata, $key);
                             }
                         }
                     }
                 }
             } else {
                 unset($payload[$property]);
-                $payload["resource:{$resourceName}"][$property] = $value;
+                if ($resourceLink) {
+                    $payload["{$resourceName}|{$resourceLink}"][$property] = $value;
+                } else {
+                    $payload["{$resourceName}"][$property] = $value;
+                }
+            }
+        }
+    }
+
+    /**
+     * @param string $url
+     * @param array  $payload
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function prepareRequests($url, array &$payload)
+    {
+        // Because several resources are potentially
+        // concerned by the update, we have
+        // to prepare their respective requests with:
+        // - a POST if the resource not yet exists
+        // - a PATCH + PK if it's just an update
+        //
+        // To do so we will extend the custom syntax used
+        // in preparePayload method. The following syntax
+        // will be applied to the payload keys:
+        // {resourceName}|{cusLink}|{href}
+
+        // First we need to retrieve the main resource to inspect it
+        $data = $this->get($url);
+
+        foreach ($payload as $key => $properties) {
+            if (\strpos($key, '|')) {
+                list($resourceName, $cusLink) = explode('|', $key);
+            } else {
+                continue;
+                // Since the update is already required
+                // for the main resource, we only process
+                // the custom resources
+            }
+
+            if (isset($data[$cusLink])) {
+                $newKey = $key;
+
+                // Save the PKey
+                if (isset($data[$cusLink]['PKey'])) {
+                    $newKey = "{$newKey}|{$data[$cusLink]['PKey']}";
+                }
+
+                // Save the href
+                if (isset($data[$cusLink]['href'])) {
+                    $newKey = "{$newKey}|{$data[$cusLink]['href']}";
+                }
+
+                // Update the key
+                if ($newKey !== $key) {
+                    $payload[$newKey] = $payload[$key];
+                    unset($payload[$key]);
+                }
             }
         }
     }
@@ -532,6 +653,13 @@ abstract class AbstractBase
             $request = new Request($method, $url, $body, $headers, $baseUri, $this->debug);
             $request->setDebug($this->debug);
             $response = $request->send();
+
+            // Increment request counter
+            // ACS api has daily request limitation
+            // applied according to the Adobe contract
+            // So we count the number of requests.
+            $this->incrementCounter();
+
             $requestDebugInfo = $request->getDebugInfo();
             if ($requestDebugInfo) {
                 $this->addDebugInfo('request', $requestDebugInfo);
@@ -592,12 +720,56 @@ abstract class AbstractBase
      */
     protected function post($url, array $payload, $metadata = null)
     {
+        $response = [];
+
         if ($metadata) {
             $this->validateResources($payload, $metadata);
             $this->preparePayload($payload, $metadata);
+            $this->prepareRequests($url, $payload);
+
+            foreach ($payload as $key => $properties) {
+                $parameters = explode('|', $key);
+                $count = count($parameters);
+
+                // Nominal case, just run main POST request
+                if (1 === $count) {
+                    $response[] = $this->doRequest('POST', $url, \json_encode($properties));
+                } else {
+                    // Otherwise we discover PKey and href values
+                    $PKey = null;
+                    $href = null;
+                    $cusName = null;
+                    for ($i = 0; $i < $count; $i++) {
+                        $parameter = $parameters[$i];
+                        if (0 === $i) {
+                            $cusName = $parameter;
+                        }
+                        if (\preg_match('/^@/', $parameter)) {
+                            $PKey = $parameter;
+                        }
+                        if (\preg_match('/^https/', $parameter)) {
+                            $href = $parameter;
+                        }
+                    }
+                    if (isset($payload['email'])) {
+                        $properties['email'] = $payload['email'];
+                    }
+                    if ($PKey && $href) {
+                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
+                    } elseif (isset($properties['email'])) {
+                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
+                    }
+                }
+            }
+        } else {
+            $response[] = $this->doRequest('POST', $url, \json_encode($payload));
         }
 
-        return $this->doRequest('POST', $url, \json_encode($payload));
+        return $response;
+
+//        }
+//
+//        return $this->doRequest('POST', $url, \json_encode($payload));
     }
 
     /**
@@ -615,14 +787,49 @@ abstract class AbstractBase
      */
     protected function patch($url, array $payload, $metadata = null)
     {
-        $this->validateResources($payload, $metadata);
-        $this->preparePayload($payload, $metadata);
-
         $response = [];
-        foreach ($payload as $resource => $resourcePayload) {
-            $response[] = ['PATCH', $url, \json_encode($resourcePayload)];
-            // @TODO: run these requests with the right url...
-            //$response[] = $this->doRequest('PATCH', $url, \json_encode($resourcePayload));
+
+        if ($metadata) {
+            $this->validateResources($payload, $metadata);
+            $this->preparePayload($payload, $metadata);
+            $this->prepareRequests($url, $payload);
+
+            foreach ($payload as $key => $properties) {
+                $parameters = explode('|', $key);
+                $count = count($parameters);
+
+                // Nominal case, just run main PATCH request
+                if (1 === $count) {
+                    $response[] = $this->doRequest('PATCH', $url, \json_encode($properties));
+                } else {
+                    // Otherwise we discover PKey and href values
+                    $PKey = null;
+                    $href = null;
+                    $cusName = null;
+                    for ($i = 0; $i < $count; $i++) {
+                        $parameter = $parameters[$i];
+                        if (0 === $i) {
+                            $cusName = $parameter;
+                        }
+                        if (\preg_match('/^@/', $parameter)) {
+                            $PKey = $parameter;
+                        }
+                        if (\preg_match('/^https/', $parameter)) {
+                            $href = $parameter;
+                        }
+                    }
+                    if (isset($payload['email'])) {
+                        $properties['email'] = $payload['email'];
+                    }
+                    if ($PKey && $href) {
+                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
+                    } elseif (isset($properties['email'])) {
+                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
+                    }
+                }
+            }
+        } else {
+            $response[] = $this->doRequest('PATCH', $url, \json_encode($payload));
         }
 
         return $response;
@@ -642,5 +849,33 @@ abstract class AbstractBase
     protected function delete($linkIdentifier)
     {
         return $this->doRequest('DELETE', $linkIdentifier);
+    }
+
+    /**
+     * Log daily count of requests
+     */
+    protected function incrementCounter()
+    {
+        if (isset($this->logDir) && $this->logDir && \file_exists($this->logDir)) {
+            if (!file_exists("{$this->logDir}/aec-php-sdk-counts")) {
+                mkdir("{$this->logDir}/aec-php-sdk-counts", 0777, true);
+            }
+
+            $date = date("Y-m-d");
+            $logFilePath = "{$this->logDir}/aec-php-sdk-counts/{$date}";
+
+            if (!\file_exists($logFilePath)) {
+                $handle = fopen($logFilePath, "x+");
+                \fclose($handle);
+            }
+
+            $count = file_get_contents($logFilePath);
+            if (!$count) {
+                $count = 1;
+            } else {
+                $count += 1;
+            }
+            file_put_contents($logFilePath, $count);
+        }
     }
 }
