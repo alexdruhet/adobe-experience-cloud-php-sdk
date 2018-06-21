@@ -14,7 +14,7 @@ namespace Pixadelic\Adobe\Exception;
  */
 class ClientException extends \Exception
 {
-    private $_data = '';
+    private $data = '';
 
     /**
      * ClientException constructor.
@@ -25,7 +25,7 @@ class ClientException extends \Exception
      */
     public function __construct($message, $code, $data = '')
     {
-        $this->_data = $data;
+        $this->data = $data;
         parent::__construct($message, $code);
     }
 
@@ -34,6 +34,6 @@ class ClientException extends \Exception
      */
     public function getData()
     {
-        return $this->_data;
+        return $this->data;
     }
 }

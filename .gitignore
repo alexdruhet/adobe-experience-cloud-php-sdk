@@ -11,6 +11,7 @@ app/ssl/
 vendor/
 *.log
 cache
+aec-php-sdk-counts
 
 .ignore*
 
