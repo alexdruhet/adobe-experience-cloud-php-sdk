@@ -814,6 +814,7 @@ abstract class AbstractBase
      * @param null   $metadata
      *
      * @return array
+     *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
@@ -825,11 +826,11 @@ abstract class AbstractBase
         $verb2 = null;
 
         if (in_array($verb, ['POST', 'PATCH'])) {
-            if ($verb === 'POST') {
+            if ('POST' === $verb) {
                 $verb1 = 'POST';
                 $verb2 = 'PATCH';
             }
-            if ($verb === 'PATCH') {
+            if ('PATCH' === $verb) {
                 $verb1 = 'PATCH';
                 $verb2 = 'POST';
             }
