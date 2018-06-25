@@ -508,6 +508,8 @@ abstract class AbstractBase
     }
 
     /**
+     * @TODO: prevent case of duplicate property names between resources
+     *
      * @param array  $payload
      * @param array  $metadata
      * @param string $resourceLink
@@ -516,7 +518,6 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    // @TODO: prevent case of duplicate property names between resources
     protected function preparePayload(array &$payload, array $metadata, $resourceLink = null)
     {
         $content = $metadata['content'];
@@ -558,6 +559,19 @@ abstract class AbstractBase
     }
 
     /**
+     * Prepare payload
+     *
+     * Because several resources are potentially
+     * concerned by the update, we have
+     * to prepare their respective requests with:
+     * - a POST if the resource not yet exists
+     * - a PATCH + PK if it's just an update
+     *
+     * To do so we will extend the custom syntax used
+     * in preparePayload method. The following syntax
+     * will be applied to the payload keys:
+     * {resourceName}|{cusLink}|{href}
+     *
      * @param string $url
      * @param array  $payload
      *
@@ -567,16 +581,6 @@ abstract class AbstractBase
      */
     protected function prepareRequests($url, array &$payload)
     {
-        // Because several resources are potentially
-        // concerned by the update, we have
-        // to prepare their respective requests with:
-        // - a POST if the resource not yet exists
-        // - a PATCH + PK if it's just an update
-        //
-        // To do so we will extend the custom syntax used
-        // in preparePayload method. The following syntax
-        // will be applied to the payload keys:
-        // {resourceName}|{cusLink}|{href}
 
         // First we need to retrieve the main resource to inspect it
         $data = $this->get($url);
@@ -720,56 +724,53 @@ abstract class AbstractBase
      */
     protected function post($url, array $payload, $metadata = null)
     {
-        $response = [];
-
-        if ($metadata) {
-            $this->validateResources($payload, $metadata);
-            $this->preparePayload($payload, $metadata);
-            $this->prepareRequests($url, $payload);
-
-            foreach ($payload as $key => $properties) {
-                $parameters = explode('|', $key);
-                $count = count($parameters);
-
-                // Nominal case, just run main POST request
-                if (1 === $count) {
-                    $response[] = $this->doRequest('POST', $url, \json_encode($properties));
-                } else {
-                    // Otherwise we discover PKey and href values
-                    $PKey = null;
-                    $href = null;
-                    $cusName = null;
-                    for ($i = 0; $i < $count; $i++) {
-                        $parameter = $parameters[$i];
-                        if (0 === $i) {
-                            $cusName = $parameter;
-                        }
-                        if (\preg_match('/^@/', $parameter)) {
-                            $PKey = $parameter;
-                        }
-                        if (\preg_match('/^https/', $parameter)) {
-                            $href = $parameter;
-                        }
-                    }
-                    if (isset($payload['email'])) {
-                        $properties['email'] = $payload['email'];
-                    }
-                    if ($PKey && $href) {
-                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
-                    } elseif (isset($properties['email'])) {
-                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
-                    }
-                }
-            }
-        } else {
-            $response[] = $this->doRequest('POST', $url, \json_encode($payload));
-        }
-
-        return $response;
-
+        return $this->dispatchRequests('POST', $url, $payload, $metadata);
+//        $response = [];
+//
+//        if ($metadata) {
+//            $this->validateResources($payload, $metadata);
+//            $this->preparePayload($payload, $metadata);
+//            $this->prepareRequests($url, $payload);
+//
+//            foreach ($payload as $key => $properties) {
+//                $parameters = explode('|', $key);
+//                $count = count($parameters);
+//
+//                // Nominal case, just run main POST request
+//                if (1 === $count) {
+//                    $response[] = $this->doRequest('POST', $url, \json_encode($properties));
+//                } else {
+//                    // Otherwise we discover PKey and href values
+//                    $PKey = null;
+//                    $href = null;
+//                    $cusName = null;
+//                    for ($i = 0; $i < $count; $i++) {
+//                        $parameter = $parameters[$i];
+//                        if (0 === $i) {
+//                            $cusName = $parameter;
+//                        }
+//                        if (\preg_match('/^@/', $parameter)) {
+//                            $PKey = $parameter;
+//                        }
+//                        if (\preg_match('/^https/', $parameter)) {
+//                            $href = $parameter;
+//                        }
+//                    }
+//                    if (isset($payload['email'])) {
+//                        $properties['email'] = $payload['email'];
+//                    }
+//                    if ($PKey && $href) {
+//                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
+//                    } elseif (isset($properties['email'])) {
+//                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
+//                    }
+//                }
+//            }
+//        } else {
+//            $response[] = $this->doRequest('POST', $url, \json_encode($payload));
 //        }
 //
-//        return $this->doRequest('POST', $url, \json_encode($payload));
+//        return $response;
     }
 
     /**
@@ -787,7 +788,56 @@ abstract class AbstractBase
      */
     protected function patch($url, array $payload, $metadata = null)
     {
+        return $this->dispatchRequests('PATCH', $url, $payload, $metadata);
+    }
+
+    /**
+     * DELETE request wrapper
+     *
+     * @param string $linkIdentifier
+     *
+     * @return mixed
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function delete($linkIdentifier)
+    {
+        return $this->doRequest('DELETE', $linkIdentifier);
+    }
+
+    /**
+     * @param string $verb
+     * @param string $url
+     * @param array  $payload
+     * @param null   $metadata
+     *
+     * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function dispatchRequests($verb, $url, array $payload, $metadata = null)
+    {
         $response = [];
+        $verb1 = null;
+        $verb2 = null;
+
+        if (in_array($verb, ['POST', 'PATCH'])) {
+            if ($verb === 'POST') {
+                $verb1 = 'POST';
+                $verb2 = 'PATCH';
+            }
+            if ($verb === 'PATCH') {
+                $verb1 = 'PATCH';
+                $verb2 = 'POST';
+            }
+        }
+
+        if (!$verb1 || !$verb2) {
+            throw new ClientException('Sorry, an error occurred while dispatching requests', 500);
+        }
 
         if ($metadata) {
             $this->validateResources($payload, $metadata);
@@ -800,7 +850,7 @@ abstract class AbstractBase
 
                 // Nominal case, just run main PATCH request
                 if (1 === $count) {
-                    $response[] = $this->doRequest('PATCH', $url, \json_encode($properties));
+                    $response[] = $this->doRequest($verb1, $url, \json_encode($properties));
                 } else {
                     // Otherwise we discover PKey and href values
                     $PKey = null;
@@ -822,33 +872,17 @@ abstract class AbstractBase
                         $properties['email'] = $payload['email'];
                     }
                     if ($PKey && $href) {
-                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
+                        $response[] = $this->doRequest($verb1, $href, \json_encode($properties));
                     } elseif (isset($properties['email'])) {
-                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
+                        $response[] = $this->doRequest($verb2, $cusName, \json_encode($properties));
                     }
                 }
             }
         } else {
-            $response[] = $this->doRequest('PATCH', $url, \json_encode($payload));
+            $response[] = $this->doRequest($verb1, $url, \json_encode($payload));
         }
 
         return $response;
-    }
-
-    /**
-     * DELETE request wrapper
-     *
-     * @param string $linkIdentifier
-     *
-     * @return mixed
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
-     */
-    protected function delete($linkIdentifier)
-    {
-        return $this->doRequest('DELETE', $linkIdentifier);
     }
 
     /**

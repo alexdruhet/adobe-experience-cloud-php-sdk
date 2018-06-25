@@ -23,7 +23,7 @@ class ClientException extends \Exception
      * @param int    $code
      * @param string $data
      */
-    public function __construct($message, $code, $data = '')
+    public function __construct($message, $code = 500, $data = '')
     {
         $this->data = $data;
         parent::__construct($message, $code);

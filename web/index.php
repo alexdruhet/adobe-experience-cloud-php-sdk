@@ -72,10 +72,10 @@ if (isset($config['parameters']['test_event_name'])) {
 /**
  * Getting access token
  */
-$accessToken = new AccessToken($config['adobe']['campaign']);
-$accessToken->flush();
+//$accessToken = new AccessToken($config['adobe']['campaign']);
+//$accessToken->flush();
 
-Utils::execute($accessToken, 'get');
+//Utils::execute($accessToken, 'get');
 
 /**
  * CampaignStandard client example
@@ -84,7 +84,7 @@ $campaignClient = new CampaignStandard($config['adobe']['campaign']);
 $campaignClient->flush();
 $prefix = get_class($campaignClient).'->';
 
-Utils::execute($campaignClient, 'getProfileMetadata');
+//Utils::execute($campaignClient, 'getProfileMetadata');
 //Utils::execute($campaignClient, 'getProfileResources');
 //Utils::execute($campaignClient, 'getServiceResources');
 
@@ -150,21 +150,21 @@ if (isset($testProfile['PKey'])) {
     //        ],
     //    ]
     //);
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1976-09-10',
-                'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'ios',
-                'LcahMember' => 0,
-            ],
-        ]
-    );
+    //Utils::execute(
+    //    $campaignClient,
+    //    'updateProfile',
+    //    [
+    //        $testProfile['PKey'],
+    //        [
+    //            'birthDate' => '1976-09-10',
+    //            'preferredLanguage' => 'fr_fr',
+    //            'Acquisition' => 'self granted',
+    //            'InstagramUsername' => $testInstagram,
+    //            'AppUser' => 'ios',
+    //            'LcahMember' => 0,
+    //        ],
+    //    ]
+    //);
 }
 //Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
 //Utils::execute($campaignClient, 'getServices');
