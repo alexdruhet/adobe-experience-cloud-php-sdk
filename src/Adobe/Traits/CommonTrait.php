@@ -330,7 +330,7 @@ trait CommonTrait
                 $this->debug = (bool) $config['debug'];
             }
         } catch (\Exception $exception) {
-            throw new ClientException($exception->getMessage());
+            throw new ClientException($exception->getMessage(), 400);
         }
 
         return $this
