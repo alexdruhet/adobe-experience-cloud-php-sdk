@@ -357,8 +357,8 @@ abstract class AbstractBase
                     // We can potentially find the nested property metadata
                     // since we load the linked property metadata in getMetadata
                     if (isset($nestedMetadata['compatibleResources'])) {
-                        $compatibleResources = $nestedMetadata['compatibleResources'];
-                        $resourceName = array_shift(array_keys($compatibleResources));
+                        $compatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
+                        $resourceName = array_shift($compatibleResourcesKeys);
 
                         // Proceed only if the property is owned by our organisation unit
                         if (in_array($resourceName, $this->orgUnitResources)) {
@@ -535,12 +535,12 @@ abstract class AbstractBase
                         // We can potentially find the nested property metadata
                         // since we load the linked property metadata in getMetadata
                         if (isset($nestedMetadata['compatibleResources'])) {
-                            $nestedCompatibleResources = $nestedMetadata['compatibleResources'];
-                            $nestedResourceName = array_shift(array_keys($nestedCompatibleResources));
+                            $nestedCompatibleResourcesKeys = \array_keys($nestedMetadata['compatibleResources']);
+                            $nestedResourceName = array_shift($nestedCompatibleResourcesKeys);
 
                             // Proceed only if the property is owned by our organisation unit
                             if (in_array($nestedResourceName, $this->orgUnitResources)) {
-                                // @TODO: Automaticaly add custom key mandatory fields if required
+                                // @TODO: Automatically add custom key mandatory fields if required
                                 // even if the metadata does not provide support for this feature
                                 $this->preparePayload($payload, $nestedMetadata, $key);
                             }
@@ -725,52 +725,6 @@ abstract class AbstractBase
     protected function post($url, array $payload, $metadata = null)
     {
         return $this->dispatchRequests('POST', $url, $payload, $metadata);
-//        $response = [];
-//
-//        if ($metadata) {
-//            $this->validateResources($payload, $metadata);
-//            $this->preparePayload($payload, $metadata);
-//            $this->prepareRequests($url, $payload);
-//
-//            foreach ($payload as $key => $properties) {
-//                $parameters = explode('|', $key);
-//                $count = count($parameters);
-//
-//                // Nominal case, just run main POST request
-//                if (1 === $count) {
-//                    $response[] = $this->doRequest('POST', $url, \json_encode($properties));
-//                } else {
-//                    // Otherwise we discover PKey and href values
-//                    $PKey = null;
-//                    $href = null;
-//                    $cusName = null;
-//                    for ($i = 0; $i < $count; $i++) {
-//                        $parameter = $parameters[$i];
-//                        if (0 === $i) {
-//                            $cusName = $parameter;
-//                        }
-//                        if (\preg_match('/^@/', $parameter)) {
-//                            $PKey = $parameter;
-//                        }
-//                        if (\preg_match('/^https/', $parameter)) {
-//                            $href = $parameter;
-//                        }
-//                    }
-//                    if (isset($payload['email'])) {
-//                        $properties['email'] = $payload['email'];
-//                    }
-//                    if ($PKey && $href) {
-//                        $response[] = $this->doRequest('PATCH', $href, \json_encode($properties));
-//                    } elseif (isset($properties['email'])) {
-//                        $response[] = $this->doRequest('POST', $cusName, \json_encode($properties));
-//                    }
-//                }
-//            }
-//        } else {
-//            $response[] = $this->doRequest('POST', $url, \json_encode($payload));
-//        }
-//
-//        return $response;
     }
 
     /**

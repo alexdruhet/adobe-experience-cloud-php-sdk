@@ -118,53 +118,54 @@ if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
     $testProfile = $data[$prefix.'createProfile']['success'][0];
 }
+Utils::execute($campaignClient, 'getProfileByEmail', ['test@iflya380.com']);
 if (isset($testProfile['PKey'])) {
-    //Utils::execute(
-    //    $campaignClient,
-    //    'updateProfile',
-    //    [
-    //        $testProfile['PKey'],
-    //        [
-    //            'birthDate' => '1971-06-10',
-    //            'preferredLanguage' => 'fr_frt',
-    //            'Acquisition' => 'self granted',
-    //            'InstagramUsername' => $testInstagram,
-    //            'AppUser' => 'unknown',
-    //            'LcahMember' => false,
-    //            'badfield' => 'badvalue',
-    //        ],
-    //    ]
-    //);
-    //Utils::execute(
-    //    $campaignClient,
-    //    'updateProfile',
-    //    [
-    //        $testProfile['PKey'],
-    //        [
-    //            'birthDate' => '1972-08-02',
-    //            'preferredLanguage' => 'fr_fr',
-    //            'Acquisition' => 'self granted',
-    //            'InstagramUsername' => $testInstagram,
-    //            'AppUser' => 'toto',
-    //            'LcahMember' => false,
-    //        ],
-    //    ]
-    //);
-    //Utils::execute(
-    //    $campaignClient,
-    //    'updateProfile',
-    //    [
-    //        $testProfile['PKey'],
-    //        [
-    //            'birthDate' => '1976-09-10',
-    //            'preferredLanguage' => 'fr_fr',
-    //            'Acquisition' => 'self granted',
-    //            'InstagramUsername' => $testInstagram,
-    //            'AppUser' => 'ios',
-    //            'LcahMember' => 0,
-    //        ],
-    //    ]
-    //);
+    Utils::execute(
+        $campaignClient,
+        'updateProfile',
+        [
+            $testProfile['PKey'],
+            [
+                'birthDate' => '1971-06-10',
+                'preferredLanguage' => 'fr_frt',
+                'Acquisition' => 'self granted',
+                'InstagramUsername' => $testInstagram,
+                'AppUser' => 'unknown',
+                'LcahMember' => false,
+                'badfield' => 'badvalue',
+            ],
+        ]
+    );
+    Utils::execute(
+        $campaignClient,
+        'updateProfile',
+        [
+            $testProfile['PKey'],
+            [
+                'birthDate' => '1972-08-02',
+                'preferredLanguage' => 'fr_fr',
+                'Acquisition' => 'self granted',
+                'InstagramUsername' => $testInstagram,
+                'AppUser' => 'toto',
+                'LcahMember' => false,
+            ],
+        ]
+    );
+    Utils::execute(
+        $campaignClient,
+        'updateProfile',
+        [
+            $testProfile['PKey'],
+            [
+                'birthDate' => '1976-09-10',
+                'preferredLanguage' => 'fr_fr',
+                'Acquisition' => 'self granted',
+                'InstagramUsername' => $testInstagram,
+                'AppUser' => 'ios',
+                'LcahMember' => 0,
+            ],
+        ]
+    );
 }
 //Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
 //Utils::execute($campaignClient, 'getServices');
