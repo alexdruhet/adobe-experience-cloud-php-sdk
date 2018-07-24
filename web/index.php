@@ -261,6 +261,7 @@ if ($newProfileTest) {
  * Worflow tests
  */
 if ($testWorkflow) {
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
     Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
     Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
     Utils::execute($campaignClient, 'pauseWorkflow', [$testWorkflow]);
