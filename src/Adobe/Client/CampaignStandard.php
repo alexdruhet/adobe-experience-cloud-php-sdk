@@ -488,7 +488,7 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 3;
 
-        return $this->get($id);
+        return $this->unsetExtended()->get($id);
     }
 
 //    /**
