@@ -194,8 +194,17 @@ class CampaignStandard extends AbstractBase
 
         $response = $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
         if ($response && $this->reconciliationWorkflowID) {
-            $this->startWorkflow($this->reconciliationWorkflowID);
+            $workflowActivity = $this->getWorkflowActivity($this->reconciliationWorkflowID);
+            $state = $workflowActivity['state'];
+            if ('stopped' === $state) {
+                $this->startWorkflow($this->reconciliationWorkflowID);
+            }
+            //else {
+                // @TODO: add task to an hypothetical queue in order to be batch processed
+            //}
         }
+
+        return $response;
     }
 
     /**
