@@ -170,6 +170,11 @@ trait CommonTrait
     protected $logDir;
 
     /**
+     * @var int
+     */
+    protected $dailyRequestsThreshold = 20000;
+
+    /**
      * Decides whether we are running
      * our calls against production
      * or staging instance.
@@ -186,52 +191,62 @@ trait CommonTrait
     protected $stagingSuffix = '-mkt-stage1';
 
     /**
-     * @param mixed $content
-     * @param int   $expiration
+     * @param mixed  $content
+     * @param int    $expiration
+     * @param string $cacheId
      *
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function setCache($content, $expiration = null)
+    public function setCache($content, $expiration = null, $cacheId = null)
     {
+        $cacheId = null === $cacheId ? $this->cacheId : $cacheId;
         if ($this->enableCache) {
             if (!$expiration || !\is_numeric($expiration)) {
                 $expiration = $this->expiration;
             }
             $this->addDebugInfo('cache_expiration', $expiration);
-            $this->cache->set($this->cacheId, $content, (int) $expiration);
+            $this->cache->set($cacheId, $content, (int) $expiration);
         }
     }
 
     /**
+     * @param string $cacheId
+     *
      * @return mixed|null
      *
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getCache()
+    public function getCache($cacheId = null)
     {
-        if ($this->hasCache()) {
-            return $this->cache->get($this->cacheId);
+        $cacheId = null === $cacheId ? $this->cacheId : $cacheId;
+        if ($this->hasCache($cacheId)) {
+            return $this->cache->get($cacheId);
         }
 
         return null;
     }
 
     /**
+     * @param string $cacheId
+     *
      * @return bool
      */
-    public function hasCache()
+    public function hasCache($cacheId = null)
     {
-        return $this->enableCache && $this->cache->has($this->cacheId);
+        $cacheId = null === $cacheId ? $this->cacheId : $cacheId;
+
+        return $this->enableCache && $this->cache->has($cacheId);
     }
 
     /**
-     * @param int $seconds
+     * @param int    $seconds
+     * @param string $cacheId
      *
      * @return $this
      */
-    public function setExpiration($seconds)
+    public function setExpiration($seconds, $cacheId = null)
     {
-        $this->flush();
+        $this->flush($cacheId);
 
         if (!\is_numeric($seconds)) {
             $seconds = 86400;
@@ -243,12 +258,14 @@ trait CommonTrait
     }
 
     /**
+     * @param string $cacheId
      *
      */
-    public function flush()
+    public function flush($cacheId = null)
     {
-        if ($this->cache && $this->cache->has($this->cacheId)) {
-            $this->cache->delete($this->cacheId);
+        $cacheId = null === $cacheId ? $this->cacheId : $cacheId;
+        if ($this->cache && $this->cache->has($cacheId)) {
+            $this->cache->delete($cacheId);
         }
     }
 
@@ -328,6 +345,9 @@ trait CommonTrait
             }
             if (isset($config['debug'])) {
                 $this->debug = (bool) $config['debug'];
+            }
+            if (isset($config['requests_threshold'])) {
+                $this->dailyRequestsThreshold = (int) $config['requests_threshold'];
             }
         } catch (\Exception $exception) {
             throw new ClientException($exception->getMessage(), 400);

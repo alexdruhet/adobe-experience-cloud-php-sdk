@@ -117,10 +117,17 @@ abstract class AbstractBase
      */
     public function getMetadata($resource)
     {
+        $cacheId = "aec.Metadata_".$resource;
         $index = "{$this->endpoints[$this->currentEndpointIndex]}/{$resource}";
         if (!isset($this->metadata[$index])) {
-            $url = sprintf('resourceType/%s', $resource);
-            $this->metadatas[$index] = $this->get($url);
+            $metadata = $this->getCache($cacheId);
+            if (!$metadata) {
+                $url = sprintf('resourceType/%s', $resource);
+                $this->metadatas[$index] = $this->get($url);
+                $this->setCache($this->metadatas[$index], null, $cacheId);
+            } else {
+                $this->metadatas[$index] = $metadata;
+            }
         }
 
         return $this->metadatas[$index];
@@ -141,17 +148,25 @@ abstract class AbstractBase
      */
     public function getResources($majorEndpoint)
     {
+        $cacheId = "aec.Resources_".$majorEndpoint;
         if (!count($this->resources) || !isset($this->resources[$majorEndpoint])) {
-            $this->setExtended();
-            $response = $this->get("{$majorEndpoint}.json", ['_lineCount' => 1]);
-            $this->unsetExtended();
-            if (isset($response['content'])) {
-                $this->resources[$majorEndpoint] = $response['content'];
+            $resources = $this->getCache($cacheId);
+            if (!$resources) {
+                $this->setExtended();
+                $response = $this->get("{$majorEndpoint}.json", ['_lineCount' => 1]);
+                $this->unsetExtended();
+                if (isset($response['content'])) {
+                    $this->resources[$majorEndpoint] = $response['content'];
+                    $this->setCache($this->resources[$majorEndpoint], null, $cacheId);
+                }
+            } else {
+                $this->resources[$majorEndpoint] = $resources;
             }
         }
 
         return $this->resources[$majorEndpoint];
     }
+
 
     /**
      * Get next page of a results set
@@ -652,38 +667,48 @@ abstract class AbstractBase
     protected function doRequest($method, $url, $body = null)
     {
         try {
-            $headers = $this->getHeaders();
-            $baseUri = $this->getBaseUri();
-            $request = new Request($method, $url, $body, $headers, $baseUri, $this->debug);
-            $request->setDebug($this->debug);
-            $response = $request->send();
-
             // Increment request counter
             // ACS api has daily request limitation
             // applied according to the Adobe contract
             // So we count the number of requests.
-            $this->incrementCounter();
-
-            $requestDebugInfo = $request->getDebugInfo();
-            if ($requestDebugInfo) {
-                $this->addDebugInfo('request', $requestDebugInfo);
-            }
-            $code = $response->getStatusCode();
-            $reason = $response->getReasonPhrase();
-            $content = \json_decode($response->getBody()->getContents(), true);
-
-            if (!$content) {
-                $content = [];
-                $content['code'] = $code;
-                $content['message'] = $reason;
+            $count = $this->incrementCounter();
+            $doRequest = true;
+            //send request only if daily threshold not reached
+            //log request otherwise
+            if ($count >= $this->dailyRequestsThreshold / 2 && in_array($method, ['POST', 'PATCH', 'DELETE'])) {
+                $this->logRequest($method, $url, $body);
+                $content = array('code' => 200, 'message' => 'request logged');
+                $doRequest = false;
             }
 
-            if ($this->debug) {
-                $content['debug'] = $this->getDebugInfo();
-            }
+            if ($doRequest) {
+                $headers = $this->getHeaders();
+                $baseUri = $this->getBaseUri();
+                $request = new Request($method, $url, $body, $headers, $baseUri, $this->debug);
+                $request->setDebug($this->debug);
+                $response = $request->send();
 
-            if (400 <= $code) {
-                throw new ClientException($reason, $code);
+                $requestDebugInfo = $request->getDebugInfo();
+                if ($requestDebugInfo) {
+                    $this->addDebugInfo('request', $requestDebugInfo);
+                }
+                $code = $response->getStatusCode();
+                $reason = $response->getReasonPhrase();
+                $content = \json_decode($response->getBody()->getContents(), true);
+
+                if (!$content) {
+                    $content = [];
+                    $content['code'] = $code;
+                    $content['message'] = $reason;
+                }
+
+                if ($this->debug) {
+                    $content['debug'] = $this->getDebugInfo();
+                }
+
+                if (400 <= $code) {
+                    throw new ClientException($reason, $code);
+                }
             }
         } catch (\Exception $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
@@ -842,9 +867,11 @@ abstract class AbstractBase
 
     /**
      * Log daily count of requests
+     * @return int
      */
     protected function incrementCounter()
     {
+        $count = 0;
         if (isset($this->logDir) && $this->logDir && \file_exists($this->logDir)) {
             if (!file_exists("{$this->logDir}/aec-php-sdk-counts")) {
                 mkdir("{$this->logDir}/aec-php-sdk-counts", 0777, true);
@@ -865,6 +892,35 @@ abstract class AbstractBase
                 $count += 1;
             }
             file_put_contents($logFilePath, $count);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Log request in csv file
+     * @param string $method
+     * @param string $url
+     * @param array  $body
+     */
+    protected function logRequest($method, $url, $body)
+    {
+        if (isset($this->logDir) && $this->logDir && \file_exists($this->logDir)) {
+            if (!file_exists("{$this->logDir}/aec-php-sdk-requests")) {
+                mkdir("{$this->logDir}/aec-php-sdk-requests", 0777, true);
+            }
+
+            $date = date("Y-m-d");
+            $logFilePath = "{$this->logDir}/aec-php-sdk-requests/{$date}";
+
+            if (file_exists($logFilePath)) {
+                $handle = fopen($logFilePath, 'a');
+            } else {
+                $handle = fopen($logFilePath, 'w');
+            }
+            $message = $method.",".$url.",".json_encode($body);
+            \fwrite($handle, $message."\n");
+            \fclose($handle);
         }
     }
 }
