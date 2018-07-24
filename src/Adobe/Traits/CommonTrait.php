@@ -130,6 +130,13 @@ trait CommonTrait
     protected $expiration = 3600 * 24;
 
     /**
+     * A workflow ID to trigger after any profile creation
+     *
+     * @var string
+     */
+    protected $reconciliationWorkflowID;
+
+    /**
      * @var bool
      */
     protected $enableCache = true;
@@ -287,6 +294,9 @@ trait CommonTrait
             $this->orgUnit = $config['org_unit'];
 
             // Optional parameters
+            if (isset($config['reconciliation_workflow_id'])) {
+                $this->reconciliationWorkflowID = $config['reconciliation_workflow_id'];
+            }
             if (isset($config['org_unit_param'])) {
                 $this->orgUnitParam = $config['org_unit_param'];
             }
