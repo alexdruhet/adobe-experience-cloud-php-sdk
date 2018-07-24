@@ -13,7 +13,7 @@ ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 require $appRoot.'/web/utils.php';
 
-use Pixadelic\Adobe\Client\CampaignStandard;use Symfony\Component\Yaml\Yaml;
+use Pixadelic\Adobe\Api\AccessToken;use Pixadelic\Adobe\Client\CampaignStandard;use Symfony\Component\Yaml\Yaml;
 
 /**
  * Load and prepare config
@@ -26,6 +26,7 @@ $campaignClient = null;
 $testEventName = null;
 $testEventPayload = [];
 $testInstagram = '@test';
+$testWorkflow = null;
 
 
 if (isset($_GET['prod'])) {
@@ -37,6 +38,9 @@ if (isset($_GET['prod'])) {
 }
 if (isset($config['adobe']['campaign']['private_key'])) {
     $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
+}
+if (isset($config['adobe']['campaign']['reconciliation_workflow_id'])) {
+    $testWorkflow = $config['adobe']['campaign']['reconciliation_workflow_id'];
 }
 if (isset($config['parameters']['test_email'])) {
     $testEmail = $config['parameters']['test_email'];
@@ -122,10 +126,8 @@ Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['su
 /**
  * Profile manipulation tests
  */
-$endEmail = end($data[$prefix.'getNext_alt']['success']['content']);
-Utils::execute($campaignClient, 'getProfileByEmail', [$endEmail]);
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
-if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
+if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
 } else {
     Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
@@ -253,6 +255,22 @@ if ($newProfileTest) {
     }
     Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
     Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
+}
+
+/**
+ * Worflow tests
+ */
+if ($testWorkflow) {
+    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'pauseWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'resumeWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'stopWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
 }
 // @codingStandardsIgnoreEnd
 

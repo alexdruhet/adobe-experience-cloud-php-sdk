@@ -192,7 +192,10 @@ class CampaignStandard extends AbstractBase
         // If ok we proceed with the extended API
         $this->currentEndpointIndex = 0;
 
-        return $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
+        $response = $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
+        if ($response && $this->reconciliationWorkflowID) {
+            $this->startWorkflow($this->reconciliationWorkflowID);
+        }
     }
 
     /**
@@ -214,7 +217,7 @@ class CampaignStandard extends AbstractBase
 
         if (!isset($payload['email'])) {
             $profile = $this->getProfile($pKey);
-            $payload['email'] =  $profile['email'];
+            $payload['email'] = $profile['email'];
         }
 
         $this->currentEndpointIndex = 0;
@@ -483,7 +486,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getWorkflowActivity($id)
     {
-        return $this->get("workflow/execution/{$id}");
+        $this->currentEndpointIndex = 3;
+
+        return $this->get($id);
     }
 
 //    /**
@@ -532,9 +537,9 @@ class CampaignStandard extends AbstractBase
             throw new ClientException(sprintf('Invalid command submitted: %s', $command), 400);
         }
 
-        $this->currentEndpointIndex = 0;
+        $this->currentEndpointIndex = 3;
 
-        return $this->post("workflow/execution/{$id}/commands", ['method' => $command]);
+        return $this->unsetExtended()->post("{$id}/commands", ['method' => $command]);
     }
 
     /**
@@ -542,7 +547,7 @@ class CampaignStandard extends AbstractBase
      */
     protected function setEndpoints()
     {
-        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool', "campaign/mc{$this->tenantBase}"];
+        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool', "campaign/mc{$this->tenantBase}", 'campaign/workflow/execution'];
     }
 
     /**
