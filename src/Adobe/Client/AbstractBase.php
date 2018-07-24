@@ -120,7 +120,7 @@ abstract class AbstractBase
         $index = "{$this->endpoints[$this->currentEndpointIndex]}/{$resource}";
         if (!isset($this->metadata[$index])) {
             $url = sprintf('resourceType/%s', $resource);
-            $this->metadatas[$index] = $this->get($url);
+            $this->metadatas[$index] = $this->setExtended()->get($url);
         }
 
         return $this->metadatas[$index];
@@ -142,9 +142,7 @@ abstract class AbstractBase
     public function getResources($majorEndpoint)
     {
         if (!count($this->resources) || !isset($this->resources[$majorEndpoint])) {
-            $this->setExtended();
-            $response = $this->get("{$majorEndpoint}.json", ['_lineCount' => 1]);
-            $this->unsetExtended();
+            $response = $this->setExtended()->get("{$majorEndpoint}.json", ['_lineCount' => 1]);
             if (isset($response['content'])) {
                 $this->resources[$majorEndpoint] = $response['content'];
             }
