@@ -120,7 +120,7 @@ abstract class AbstractBase
         $index = "{$this->endpoints[$this->currentEndpointIndex]}/{$resource}";
         if (!isset($this->metadata[$index])) {
             $url = sprintf('resourceType/%s', $resource);
-            $this->metadatas[$index] = $this->setExtended()->get($url);
+            $this->metadatas[$index] = $this->get($url);
         }
 
         return $this->metadatas[$index];
