@@ -21,6 +21,8 @@ use Pixadelic\Adobe\Api\AccessToken;use Pixadelic\Adobe\Client\CampaignStandard;
 $data = [];
 $testEmail = null;
 $testServiceName = null;
+$testService = null;
+$testProfile = null;
 $newProfileTestEmail = null;
 $campaignClient = null;
 $testEventName = null;
@@ -130,11 +132,24 @@ Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
 if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
 } else {
-    Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
-    $testProfile = $data[$prefix.'createProfile']['success'][0];
+    Utils::execute(
+        $campaignClient,
+        'createProfile',
+        [
+            [
+                'email' => $testEmail,
+                'Firstname' => 'Joe',
+                'Lastname' => 'Gibbs',
+                'AppUser' => 'ios',
+            ],
+        ]
+    );
+    if (isset($data[$prefix.'createProfile']['success'])) {
+        $testProfile = $data[$prefix.'createProfile']['success'][0];
+    }
 }
 Utils::execute($campaignClient, 'getProfileByEmail', ['test@iflya380.com']);
-if (isset($testProfile['PKey'])) {
+if ($testProfile && isset($testProfile['PKey'])) {
     Utils::execute(
         $campaignClient,
         'updateProfile',
@@ -211,39 +226,41 @@ if (isset($testProfile['PKey'])) {
             ],
         ]
     );
-}
-Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
 
-/**
- * Service tests
- */
-Utils::execute($campaignClient, 'getServices');
-$testService = null;
-foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
-    if ($service['name'] === $testServiceName) {
-        $testService = $service;
-        break;
+
+    Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
+
+    /**
+     * Service tests
+     */
+    Utils::execute($campaignClient, 'getServices');
+    $testService = null;
+    foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
+        if ($service['name'] === $testServiceName) {
+            $testService = $service;
+            break;
+        }
     }
-}
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
-$testSubscription = null;
-foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
-    if ($subscription['serviceName'] === $testServiceName) {
-        $testSubscription = $subscription;
-        break;
+    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+    $testSubscription = null;
+    foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
+        if ($subscription['serviceName'] === $testServiceName) {
+            $testSubscription = $subscription;
+            break;
+        }
     }
+    Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
+    Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
 }
-Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
-Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
 Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
 Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
 $newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
-if ($newProfileTest) {
+if ($newProfileTest && $testService) {
     Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
     Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
     $newProfileSubscription = null;

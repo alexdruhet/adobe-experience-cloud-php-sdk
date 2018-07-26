@@ -200,7 +200,7 @@ class CampaignStandard extends AbstractBase
                 $this->startWorkflow($this->reconciliationWorkflowID);
             }
             //else {
-                // @TODO: add task to an hypothetical queue in order to be batch processed
+            // @TODO: add task to an hypothetical queue in order to be batch processed
             //}
         }
 
@@ -371,7 +371,7 @@ class CampaignStandard extends AbstractBase
         $this->validateEventResources($eventId, $payload);
         $this->currentEndpointIndex = 2;
 
-        return $this->post($eventId, $payload);
+        return $this->unsetExtended()->post($eventId, $payload);
     }
 
     /**
@@ -388,7 +388,7 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 2;
 
-        return $this->get("{$eventId}/{$eventPKey}");
+        return $this->unsetExtended()->get("{$eventId}/{$eventPKey}");
     }
 
     /**
@@ -404,7 +404,7 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 2;
 
-        return $this->getMetadata($eventId);
+        return $this->unsetExtended()->getMetadata($eventId);
     }
 
     /**
@@ -417,7 +417,7 @@ class CampaignStandard extends AbstractBase
      */
     public function validateEventResources($eventId, array $payload)
     {
-        $metadata = $this->getEventMetadata($eventId);
+        $metadata = $this->unsetExtended()->getEventMetadata($eventId);
         if (!isset($metadata['content']['ctx'])) {
             throw new ClientException(sprintf('Invalid $eventId submitted: %s', $eventId), 400);
         }
