@@ -2,8 +2,6 @@
 
 A php development kit to consume [Adobe Experience Cloud APIs](https://www.adobe.io/apis/experiencecloud.html)
 
-/!\ THIS PROJECT IS AT AN EARLY STAGE AND SHOULD NOT YET BE USED IN PRODUCTION
-
 ## Requirements
 
 * php >= 5.6
@@ -48,7 +46,7 @@ or
 
 ## Usage
 
-Some examples can be found in the web directory.
+Sample code can be found in the web directory.
 
 ## Authors
 

@@ -144,9 +144,9 @@ class CampaignStandard extends AbstractBase
 
         $this->currentEndpointIndex = 0;
 
-        //$profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
         // Since the org unit is buggy and reconciliated afterwards,
         // we need to check the profile existence without it.
+        //$profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
         $profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email]);
 
         if ($profile && isset($profile['content'][0])) {
