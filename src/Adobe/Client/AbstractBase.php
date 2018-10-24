@@ -508,56 +508,66 @@ abstract class AbstractBase
     /**
      * @TODO: prevent case of duplicate property names between resources
      *
-     * @param array  $payload
-     * @param array  $metadata
-     * @param string $resourceLink
+     * @param array $payload
+     * @param array $metadata
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function preparePayload(array &$payload, array $metadata, $resourceLink = null)
+    protected function preparePayload(array &$payload, array $metadata)
     {
-        $content = $metadata['content'];
+        $authorizedProperties = $metadata['content'];
         $compatibleResources = $metadata['compatibleResources'];
         foreach ($compatibleResources as $resourceName => $resourceValue) {
             if (ctype_alnum($resourceName)) {
                 break;
             }
         }
+
         foreach ($payload as $property => $value) {
-            if (!isset($content[$property])) {
+            if (!isset($authorizedProperties[$property])) {
                 // Try to find the property in custom resources
-                foreach ($content as $key => $nestedMetadata) {
+                foreach ($authorizedProperties as $key => $nestedMetadata) {
                     if (preg_match('/^cus/', $key)) {
                         // We can potentially find the nested property metadata
                         // since we load the linked property metadata in getMetadata
                         if (isset($nestedMetadata['compatibleResources'])) {
-                            $nestedCompatibleResourcesKeys = \array_keys($nestedMetadata['compatibleResources']);
+                            $nestedCompatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
                             $nestedResourceName = array_shift($nestedCompatibleResourcesKeys);
 
                             // Proceed only if the property is owned by our organisation unit
-                            if (in_array($nestedResourceName, $this->orgUnitResources)) {
+                            if (in_array($nestedResourceName, $this->orgUnitResources)
+                                && isset($nestedMetadata['content'][$property])
+                            ) {
                                 // @TODO: Automatically add custom key mandatory fields if required
                                 // even if the metadata does not provide support for this feature
-                                $this->preparePayload($payload, $nestedMetadata, $key);
+                                //$this->preparePayload($payload, $nestedMetadata, $key);
+
+                                unset($payload[$property]);
+                                $payload["{$nestedResourceName}|{$key}"][$property] = $value;
+                                //if (isset($nestedMetadata['authorizedProperties'][$property])) {
+                                //    $resourceKey = "{$resourceName}|{$key}";
+                                //}
                             }
                         }
                     }
                 }
             } else {
                 unset($payload[$property]);
-                if ($resourceLink) {
-                    $payload["{$resourceName}|{$resourceLink}"][$property] = $value;
-                } else {
-                    $payload["{$resourceName}"][$property] = $value;
-                }
+                //if ($resourceLink) {
+                //    $payload["{$resourceName}|{$resourceLink}"][$property] = $value;
+                //} else {
+                    $payload[$resourceName][$property] = $value;
+                //}
+                //$payload[$resourceKey][$property] = $value;
             }
         }
     }
 
+
     /**
-     * Prepare payload
+     * Prepare request
      *
      * Because several resources are potentially
      * concerned by the update, we have
