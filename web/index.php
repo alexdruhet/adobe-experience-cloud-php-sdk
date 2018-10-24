@@ -128,6 +128,16 @@ $prefix = get_class($campaignClient).'->';
 /**
  * Profile manipulation tests
  */
+//[
+//    "email" => "ncuisance@gmail.com",
+//    "firstName" => "Natacha",
+//    "lastName" => "Cuisance",
+//    "AppUser" => "android",
+//    "subscribe" => 1,
+//    "unsubscribe" => 0,
+//    "preferredLanguage" => "en_us",
+//]
+
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
 if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
@@ -139,8 +149,10 @@ if (isset($data[$prefix.'getProfileByEmail']['success'])) {
             [
                 'email' => $testEmail,
                 'firstName' => 'Joe',
+                'AppUser' => 'android',
                 'lastName' => 'Gibbs',
-                'AppUser' => 'ios',
+                'Acquisition' => 'dev_test',
+                'preferredLanguage' => 'fr_fr',
             ],
         ]
     );
@@ -149,8 +161,8 @@ if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     }
 }
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
-if (isset($data[$prefix.'getProfileByEmail']['success'])) {
-    $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
+if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
+    $testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
 } else {
     Utils::execute(
         $campaignClient,
@@ -158,9 +170,11 @@ if (isset($data[$prefix.'getProfileByEmail']['success'])) {
         [
             [
                 'email' => $testEmail,
-                'firstName' => 'Joe',
-                'lastName' => 'Gibbs',
-                'AppUser' => 'ios',
+                'firstName' => 'Coxsone',
+                'lastName' => 'Dodd',
+                'AppUser' => 'android',
+                'Acquisition' => 'duplication_test',
+                'preferredLanguage' => 'en_us',
             ],
         ]
     );
