@@ -539,28 +539,22 @@ abstract class AbstractBase
                             // Proceed only if the property is owned by our organisation unit
                             if (in_array($nestedResourceName, $this->orgUnitResources)
                                 && isset($nestedMetadata['content'][$property])
+                                && preg_match("/^$nestedResourceName/", $key)
                             ) {
                                 // @TODO: Automatically add custom key mandatory fields if required
                                 // even if the metadata does not provide support for this feature
-                                //$this->preparePayload($payload, $nestedMetadata, $key);
 
                                 unset($payload[$property]);
                                 $payload["{$nestedResourceName}|{$key}"][$property] = $value;
-                                //if (isset($nestedMetadata['authorizedProperties'][$property])) {
-                                //    $resourceKey = "{$resourceName}|{$key}";
-                                //}
                             }
                         }
                     }
                 }
             } else {
+                //if ($property !== 'email') {
                 unset($payload[$property]);
-                //if ($resourceLink) {
-                //    $payload["{$resourceName}|{$resourceLink}"][$property] = $value;
-                //} else {
-                    $payload[$resourceName][$property] = $value;
                 //}
-                //$payload[$resourceKey][$property] = $value;
+                $payload[$resourceName][$property] = $value;
             }
         }
     }
@@ -569,9 +563,9 @@ abstract class AbstractBase
     /**
      * Prepare request
      *
-     * Because several resources are potentially
-     * concerned by the update, we have
-     * to prepare their respective requests with:
+     * Because some resources are potentially
+     * concerned by an update and other by a create
+     * we have to prepare their respective requests with:
      * - a POST if the resource not yet exists
      * - a PATCH + PK if it's just an update
      *
@@ -587,11 +581,70 @@ abstract class AbstractBase
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function prepareRequests($url, array &$payload)
+    protected function prepareRequestsOLD($url, array &$payload)
     {
 
         // First we need to retrieve the main resource to inspect it
         $data = $this->get($url);
+
+        foreach ($payload as $key => $properties) {
+            if (\strpos($key, '|')) {
+                list($resourceName, $cusLink) = explode('|', $key);
+            } else {
+                continue;
+                // Since the update is already required
+                // for the main resource, we only process
+                // the custom resources
+            }
+
+            if (isset($data[$cusLink])) {
+                $newKey = $key;
+
+                // Save the PKey
+                if (isset($data[$cusLink]['PKey'])) {
+                    $newKey = "{$newKey}|{$data[$cusLink]['PKey']}";
+                }
+
+                // Save the href
+                if (isset($data[$cusLink]['href'])) {
+                    $newKey = "{$newKey}|{$data[$cusLink]['href']}";
+                }
+
+                // Update the key
+                if ($newKey !== $key) {
+                    $payload[$newKey] = $payload[$key];
+                    unset($payload[$key]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Prepare request
+     *
+     * Because some resources are potentially
+     * concerned by an update and other by a create
+     * we have to prepare their respective requests with:
+     * - a POST if the resource not yet exists
+     * - a PATCH + PK if it's just an update
+     *
+     * To do so we will extend the custom syntax used
+     * in preparePayload method. The following syntax
+     * will be applied to the payload keys:
+     * {resourceName}|{cusLink}|{href}
+     *
+     * @param array  $payload
+     * @param string $url
+     *
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \Pixadelic\Adobe\Exception\ClientException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    protected function prepareRequests(array &$payload, $data)
+    {
+
+        // First we need to retrieve the main resource to inspect it
+        //$data = $this->setExtended()->get($url);
 
         foreach ($payload as $key => $properties) {
             if (\strpos($key, '|')) {
@@ -786,6 +839,7 @@ abstract class AbstractBase
         $response = [];
         $verb1 = null;
         $verb2 = null;
+        $email = null;
 
         if (in_array($verb, ['POST', 'PATCH'])) {
             if ('POST' === $verb) {
@@ -805,13 +859,38 @@ abstract class AbstractBase
         if ($metadata) {
             $this->validateResources($payload, $metadata);
             $this->preparePayload($payload, $metadata);
-            $this->prepareRequests($url, $payload);
+
+            // Get main entity to prepare custom links requests
+            foreach ($payload as $key => $properties) {
+                $parameters = explode('|', $key);
+                $count = count($parameters);
+
+                if (isset($payload[$key]['email'])) {
+                    $email = $payload[$key]['email'];
+                }
+
+                // Nominal case, just run main entity PATCH/POST request
+                if (1 === $count) {
+                    $response = $this->doRequest($verb1, $url, \json_encode($properties));
+                    if ($verb1 !== 'POST' && isset($response['href'])) {
+                        $response[] = $this->get($response['href']);
+                    } else {
+                        $response[] = $response;
+                    }
+                    unset($payload[$key]);
+                    break;
+                }
+            }
+
+            if (count($response)) {
+                $this->prepareRequests($payload, $response[0]);
+            }
 
             foreach ($payload as $key => $properties) {
                 $parameters = explode('|', $key);
                 $count = count($parameters);
 
-                // Nominal case, just run main PATCH request
+                // Nominal case, just run main entity PATCH/POST request
                 if (1 === $count) {
                     $response[] = $this->doRequest($verb1, $url, \json_encode($properties));
                 } else {
@@ -831,10 +910,11 @@ abstract class AbstractBase
                             $href = $parameter;
                         }
                     }
-                    if (isset($payload['email'])) {
-                        $properties['email'] = $payload['email'];
+                    if ($email) {
+                        $properties['email'] = $email;
                     }
-                    if ($PKey && $href) {
+                    //if ($PKey && $href) {
+                    if ($href && $email) {
                         $response[] = $this->doRequest($verb1, $href, \json_encode($properties));
                     } elseif (isset($properties['email'])) {
                         $response[] = $this->doRequest($verb2, $cusName, \json_encode($properties));
