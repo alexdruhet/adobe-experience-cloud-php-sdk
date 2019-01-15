@@ -35,24 +35,41 @@ class CampaignStandard extends AbstractBase
     {
         if (!count($this->profileMetadata)) {
             $this->currentEndpointIndex = 0;
-            $customResources = [];
-
-            if (count($this->orgUnitResources)) {
-                foreach ($this->orgUnitResources as $orgUnitResource) {
-                    $customResources[$orgUnitResource] = $this->setExtended()->getMetadata($orgUnitResource);
-                }
-            }
+            //$customResources = [];
 
             $profileMetadata = $this->setExtended()->getMetadata($this->majorEndpoints[0]);
+
+            // We push org unit workaround field if used
+            if ($this->orgUnitParam) {
+                $this->orgUnitResources[] = $this->orgUnitParam;
+            }
+            /** @var string $orgUnitResource */
+            foreach ($this->orgUnitResources as $orgUnitResource) {
+                $authorizedRes[$orgUnitResource] = $orgUnitResource;
+            }
 
             // We restrict the profile metadata
             // to the specified custom resources
             foreach ($profileMetadata['content'] as $key => $value) {
-                if (preg_match('/^cus/', $key) && isset($value['resTarget'])) {
-                    if (!isset($customResources[$value['resTarget']])) {
-                        unset($profileMetadata['content'][$key]);
-                    } else {
-                        $profileMetadata['content'][$key] = $customResources[$value['resTarget']];
+                $res = null;
+                if (0 === strpos($key, 'cus')) {
+                    // Check client data table
+                    if (isset($value['resTarget'])) {
+                        $res = $value['resTarget'];
+                    } else { // Check custom fields
+                        $res = $key;
+                    }
+                    if ($res) {
+                        // Unset resources if not required
+                        //if (!isset($customResources[$res])) {
+                        if (!isset($authorizedRes[$res])) {
+                            unset($profileMetadata['content'][$key]);
+                        } // Store metadata if the resource is declared
+                        else {
+                            if (isset($value['resTarget'])) {
+                                $profileMetadata['content'][$key] = $this->setExtended()->getMetadata($res);
+                            }
+                        }
                     }
                 }
             }
@@ -117,10 +134,8 @@ class CampaignStandard extends AbstractBase
         if ($profile && isset($profile['content'][0])) {
             // Load custom resources data
             foreach ($profile['content'][0] as $key => $value) {
-                if (preg_match('/^cus/', $key)) {
-                    if (isset($profile['content'][0][$key]['href'])) {
-                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
-                    }
+                if (isset($profile['content'][0][$key]['href']) && 0 === strpos($key, 'cus')) {
+                    $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
                 }
             }
         }
@@ -152,10 +167,8 @@ class CampaignStandard extends AbstractBase
         if ($profile && isset($profile['content'][0])) {
             // Load custom resources data
             foreach ($profile['content'][0] as $key => $value) {
-                if (preg_match('/^cus/', $key)) {
-                    if (isset($profile['content'][0][$key]['href'])) {
-                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
-                    }
+                if (isset($profile['content'][0][$key]['href']) && 0 === strpos($key, 'cus')) {
+                    $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
                 }
             }
         } elseif ($throwException) {

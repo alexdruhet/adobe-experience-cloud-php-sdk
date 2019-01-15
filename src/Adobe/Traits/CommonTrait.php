@@ -291,17 +291,17 @@ trait CommonTrait
             $this->accessEndpoint = $config['access_endpoint'];
             $this->exchangeEndpoint = $config['exchange_endpoint'];
             $this->audience = $config['audience'];
-            $this->orgUnit = $config['org_unit'];
+            $this->orgUnit = $config['org_unit']['name'];
 
             // Optional parameters
             if (isset($config['reconciliation_workflow_id'])) {
                 $this->reconciliationWorkflowID = $config['reconciliation_workflow_id'];
             }
-            if (isset($config['org_unit_param'])) {
-                $this->orgUnitParam = $config['org_unit_param'];
+            if (isset($config['org_unit']['param'])) {
+                $this->orgUnitParam = $config['org_unit']['param'];
             }
-            if (isset($config['org_unit_resources'])) {
-                $this->orgUnitResources = $config['org_unit_resources'];
+            if (isset($config['org_unit']['resources'])) {
+                $this->orgUnitResources = $config['org_unit']['resources'];
             }
             if (isset($config['expiration'])) {
                 $this->expiration = (int) $config['expiration'];

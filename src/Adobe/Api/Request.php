@@ -66,7 +66,9 @@ class Request
         $response = null;
 
         try {
-            $response = $this->client->request($this->method, $this->url, $this->options);
+            $curlOpts = $this->options;
+            unset($curlOpts['debug']);
+            $response = $this->client->request($this->method, $this->url, $curlOpts);
         } catch (\Exception $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
@@ -99,7 +101,7 @@ class Request
     {
         if ($debug) {
             @fclose($this->options['debug']);
-            $this->options['debug'] = fopen('php://temp', 'r+');
+            $this->options['debug'] = fopen('php://temp', 'b+');
         }
     }
 
@@ -127,7 +129,7 @@ class Request
     protected function addDebugInfo($message)
     {
         if (isset($this->options['debug'])) {
-            fputs($this->options['debug'], "{$message}\n");
+            fwrite($this->options['debug'], "{$message}\n");
         }
     }
 
@@ -139,15 +141,15 @@ class Request
     protected function getRawCurlRequest()
     {
         $rawCurlRequest = '';
-        if (isset($this->options['debug'])
-            && isset($this->options['base_uri'])
-            && isset($this->options['headers'])
-        ) {
+        if (isset($this->options['debug'], $this->options['base_uri'], $this->options['headers'])) {
+            $this->addDebugInfo(" ");
+            $this->addDebugInfo("--- START ---");
+            $this->addDebugInfo(" ");
             $headers = '';
             foreach ($this->options['headers'] as $name => $value) {
                 $headers .= "-H \"{$name}: {$value}\" \\".\PHP_EOL;
             }
-            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl ".\PHP_EOL."-X {$this->method} {$this->options['base_uri']}{$this->url} \\".\PHP_EOL.$headers;
+            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl  -X {$this->method} {$this->options['base_uri']}{$this->url} \\".\PHP_EOL.$headers;
             if (isset($this->options['body'])) {
                 $rawCurlRequest .= \PHP_EOL."-i -d \"{$this->options['body']}\"";
             }
@@ -157,6 +159,9 @@ class Request
             //echo '<br>---<br>';
             //echo \PHP_EOL.\PHP_EOL;
             $this->addDebugInfo($rawCurlRequest);
+            $this->addDebugInfo(" ");
+            $this->addDebugInfo("--- END ---");
+            $this->addDebugInfo(" ");
         }
 
         return $rawCurlRequest;

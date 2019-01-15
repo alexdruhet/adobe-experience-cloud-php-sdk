@@ -75,23 +75,23 @@ if (isset($config['parameters']['test_event_name'])) {
     ];
 }
 
-/**
- * Getting access token test
- */
-$accessToken = new AccessToken($config['adobe']['campaign']);
-$accessToken->flush();
-Utils::execute($accessToken, 'get');
-
+///**
+// * Getting access token test
+// */
+//$accessToken = new AccessToken($config['adobe']['campaign']);
+//$accessToken->flush();
+//Utils::execute($accessToken, 'get');
+//
 /**
  * CampaignStandard client example
  */
 $campaignClient = new CampaignStandard($config['adobe']['campaign']);
 $campaignClient->flush();
 $prefix = get_class($campaignClient).'->';
-
-/**
- * Metadata and resource tests
- */
+//
+///**
+// * Metadata and resource tests
+// */
 //Utils::execute($campaignClient, 'getProfileMetadata');
 //Utils::execute($campaignClient, 'getProfileResources');
 //Utils::execute($campaignClient, 'getServiceResources');
@@ -124,38 +124,14 @@ $prefix = get_class($campaignClient).'->';
 //Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
 //Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
 //Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
-
-/**
- * Profile manipulation tests
- */
-//[
-//    "email" => "ncuisance@gmail.com",
-//    "firstName" => "Natacha",
-//    "lastName" => "Cuisance",
-//    "AppUser" => "android",
-//    "subscribe" => 1,
-//    "unsubscribe" => 0,
-//    "preferredLanguage" => "en_us",
-//]
-
+//
+///**
+// * Profile manipulation tests
+// */
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
 if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
 } else {
-    //Utils::execute(
-    //    $campaignClient,
-    //    'createProfile',
-    //    [
-    //        [
-    //            'email' => $testEmail,
-    //            'firstName' => 'Joe',
-    //            'AppUser' => 'android',
-    //            'lastName' => 'Gibbs',
-    //            'Acquisition' => 'dev_test',
-    //            'preferredLanguage' => 'fr_fr',
-    //        ],
-    //    ]
-    //);
     Utils::execute(
         $campaignClient,
         'createProfile',
@@ -175,169 +151,171 @@ if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     }
 }
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
-if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
-    $testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
-} else {
-    Utils::execute(
-        $campaignClient,
-        'createProfile',
-        [
-            [
-                'email' => $testEmail,
-                'firstName' => 'Coxsone',
-                'lastName' => 'Dodd',
-                'AppUser' => 'android',
-                'Acquisition' => 'duplication_test2',
-                'preferredLanguage' => 'en_us',
-            ],
-        ]
-    );
-    if (isset($data[$prefix.'createProfile']['success'])) {
-        $testProfile = $data[$prefix.'createProfile']['success'][0];
-    }
-}
-Utils::execute($campaignClient, 'getProfileByEmail', ['test@iflya380.com']);
-if ($testProfile && isset($testProfile['PKey'])) {
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1971-06-10',
-                'preferredLanguage' => 'fr_frt',
-                'Acquisition' => 'self granted 1',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'unknown',
-                'LcahMember' => false,
-                'badfield' => 'badvalue',
-            ],
-        ]
-    );
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1972-08-02',
-                'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted 2',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'toto',
-                'LcahMember' => false,
-            ],
-        ]
-    );
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1975-10-10',
-                'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted 3',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'ios',
-                'LcahMember' => 0,
-            ],
-        ]
-    );
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1976-11-10',
-                'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted 4',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'android',
-                'LcahMember' => 1,
-            ],
-        ]
-    );
-    Utils::execute(
-        $campaignClient,
-        'updateProfile',
-        [
-            $testProfile['PKey'],
-            [
-                'birthDate' => '1977-09-10',
-                'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted 5',
-                'InstagramUsername' => $testInstagram,
-                'AppUser' => 'unknown',
-                'LcahMember' => 0,
-            ],
-        ]
-    );
-
-
-    Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
-
-    /**
-     * Service tests
-     */
-    Utils::execute($campaignClient, 'getServices');
-    $testService = null;
-    foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
-        if ($service['name'] === $testServiceName) {
-            $testService = $service;
-            break;
-        }
-    }
-    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
-    $testSubscription = null;
-    foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
-        if ($subscription['serviceName'] === $testServiceName) {
-            $testSubscription = $subscription;
-            break;
-        }
-    }
-    Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
-    Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
-}
-Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
-Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
-Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
-$newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
-if ($newProfileTest && $testService) {
-    Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
-    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
-    $newProfileSubscription = null;
-    foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']['content'] as $subscription) {
-        if ($subscription['serviceName'] === $testServiceName) {
-            $newProfileSubscription = $subscription;
-            break;
-        }
-    }
-    Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
-    Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
-}
-
-/**
- * Worflow tests
- */
-if ($testWorkflow) {
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-    Utils::execute($campaignClient, 'pauseWorkflow', [$testWorkflow]);
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-    Utils::execute($campaignClient, 'resumeWorkflow', [$testWorkflow]);
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-    Utils::execute($campaignClient, 'stopWorkflow', [$testWorkflow]);
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
-    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
-}
+//if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
+//    $testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
+//} else {
+//    Utils::execute(
+//        $campaignClient,
+//        'createProfile',
+//        [
+//            [
+//                'email' => $testEmail,
+//                'firstName' => 'Coxsone',
+//                'lastName' => 'Dodd',
+//                'AppUser' => 'android',
+//                'Acquisition' => 'duplication_test2',
+//                'preferredLanguage' => 'en_us',
+//            ],
+//        ]
+//    );
+//    if (isset($data[$prefix.'createProfile']['success'])) {
+//        $testProfile = $data[$prefix.'createProfile']['success'][0];
+//    }
+//}
+//Utils::execute($campaignClient, 'getProfileByEmail', ['test@iflya380.com']);
+//if ($testProfile && isset($testProfile['PKey'])) {
+//    Utils::execute(
+//        $campaignClient,
+//        'updateProfile',
+//        [
+//            $testProfile['PKey'],
+//            [
+//                'birthDate' => '1971-06-10',
+//                'preferredLanguage' => 'fr_frt',
+//                'Acquisition' => 'self granted 1',
+//                'InstagramUsername' => $testInstagram,
+//                'AppUser' => 'unknown',
+//                'LcahMember' => false,
+//                'badfield' => 'badvalue',
+//            ],
+//        ]
+//    );
+//    Utils::execute(
+//        $campaignClient,
+//        'updateProfile',
+//        [
+//            $testProfile['PKey'],
+//            [
+//                'birthDate' => '1972-08-02',
+//                'preferredLanguage' => 'fr_fr',
+//                'Acquisition' => 'self granted 2',
+//                'InstagramUsername' => $testInstagram,
+//                'AppUser' => 'toto',
+//                'LcahMember' => false,
+//            ],
+//        ]
+//    );
+//    Utils::execute(
+//        $campaignClient,
+//        'updateProfile',
+//        [
+//            $testProfile['PKey'],
+//            [
+//                'birthDate' => '1975-10-10',
+//                'preferredLanguage' => 'fr_fr',
+//                'Acquisition' => 'self granted 3',
+//                'InstagramUsername' => $testInstagram,
+//                'AppUser' => 'ios',
+//                'LcahMember' => 0,
+//            ],
+//        ]
+//    );
+//    Utils::execute(
+//        $campaignClient,
+//        'updateProfile',
+//        [
+//            $testProfile['PKey'],
+//            [
+//                'birthDate' => '1976-11-10',
+//                'preferredLanguage' => 'fr_fr',
+//                'Acquisition' => 'self granted 4',
+//                'InstagramUsername' => $testInstagram,
+//                'AppUser' => 'android',
+//                'LcahMember' => 1,
+//            ],
+//        ]
+//    );
+//    Utils::execute(
+//        $campaignClient,
+//        'updateProfile',
+//        [
+//            $testProfile['PKey'],
+//            [
+//                'birthDate' => '1977-09-10',
+//                'preferredLanguage' => 'fr_fr',
+//                'Acquisition' => 'self granted 5',
+//                'InstagramUsername' => $testInstagram,
+//                'AppUser' => 'unknown',
+//                'LcahMember' => 0,
+//            ],
+//        ]
+//    );
+//
+//
+//    Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
+//
+//    /**
+//     * Service tests
+//     */
+//    Utils::execute($campaignClient, 'getServices');
+//    $testService = null;
+//    foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
+//        if ($service['name'] === $testServiceName) {
+//            $testService = $service;
+//            break;
+//        }
+//    }
+//    if (is_array($testService)) {
+//    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+//    Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+//    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+//    $testSubscription = null;
+//    foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
+//        if ($subscription['serviceName'] === $testServiceName) {
+//            $testSubscription = $subscription;
+//            break;
+//        }
+//    }
+//    Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
+//    }
+//    Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
+//}
+//Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
+//Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
+//$newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
+//if ($newProfileTest && $testService) {
+//    Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
+//    Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
+//    $newProfileSubscription = null;
+//    foreach ($data[$prefix.'getSubscriptionsByProfile_alt']['success']['content'] as $subscription) {
+//        if ($subscription['serviceName'] === $testServiceName) {
+//            $newProfileSubscription = $subscription;
+//            break;
+//        }
+//    }
+//    Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
+//    Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
+//}
+//
+///**
+// * Worflow tests
+// */
+//if ($testWorkflow) {
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'pauseWorkflow', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'resumeWorkflow', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'stopWorkflow', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+//    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+//}
 // @codingStandardsIgnoreEnd
 
 ?><!DOCTYPE html>
