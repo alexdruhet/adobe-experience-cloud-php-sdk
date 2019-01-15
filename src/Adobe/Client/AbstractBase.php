@@ -164,7 +164,7 @@ abstract class AbstractBase
      */
     public function getNext(array $response)
     {
-        if (isset($response['next']) && isset($response['next']['href'])) {
+        if (isset($response['next'], $response['next']['href'])) {
             return $this->get($response['next']['href']);
         }
 
@@ -351,7 +351,7 @@ abstract class AbstractBase
 
             // Try to find the property in custom resources
             foreach ($content as $key => $nestedMetadata) {
-                if (preg_match('/^cus/', $key)) {
+                if (0 === strpos($key, 'cus')) {
                     // We can potentially find the nested property metadata
                     // since we load the linked property metadata in getMetadata
                     if (isset($nestedMetadata['compatibleResources'])) {
@@ -434,8 +434,10 @@ abstract class AbstractBase
         // Cleanup the property validation entries if
         // the process has marked it valid
         if (isset($this->validationData[$property]['valid'])) {
-            unset($this->validationData[$property]['errors']);
-            unset($this->validationData[$property]['valid']);
+            unset(
+                $this->validationData[$property]['errors'],
+                $this->validationData[$property]['valid']
+            );
         }
 
         if (!isset($this->validationData[$property]['errors'])
@@ -529,24 +531,20 @@ abstract class AbstractBase
             if (!isset($authorizedProperties[$property])) {
                 // Try to find the property in custom resources
                 foreach ($authorizedProperties as $key => $nestedMetadata) {
-                    if (preg_match('/^cus/', $key)) {
-                        // We can potentially find the nested property metadata
-                        // since we load the linked property metadata in getMetadata
-                        if (isset($nestedMetadata['compatibleResources'])) {
-                            $nestedCompatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
-                            $nestedResourceName = array_shift($nestedCompatibleResourcesKeys);
+                    if (isset($nestedMetadata['compatibleResources']) && (0 === strpos($key, 'cus'))) {
+                        $nestedCompatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
+                        $nestedResourceName = array_shift($nestedCompatibleResourcesKeys);
 
-                            // Proceed only if the property is owned by our organisation unit
-                            if (in_array($nestedResourceName, $this->orgUnitResources)
-                                && isset($nestedMetadata['content'][$property])
-                                && preg_match("/^$nestedResourceName/", $key)
-                            ) {
-                                // @TODO: Automatically add custom key mandatory fields if required
-                                // even if the metadata does not provide support for this feature
+                        // Proceed only if the property is owned by our organisation unit
+                        if (isset($nestedMetadata['content'][$property])
+                            && in_array($nestedResourceName, $this->orgUnitResources, true)
+                            //&& preg_match("/^$nestedResourceName/", $key)
+                        ) {
+                            // @TODO: Automatically add custom key mandatory fields if required
+                            // even if the metadata does not provide support for this feature
 
-                                unset($payload[$property]);
-                                $payload["{$nestedResourceName}|{$key}"][$property] = $value;
-                            }
+                            unset($payload[$property]);
+                            $payload["{$nestedResourceName}|{$key}"][$property] = $value;
                         }
                     }
                 }
@@ -633,18 +631,15 @@ abstract class AbstractBase
      * will be applied to the payload keys:
      * {resourceName}|{cusLink}|{href}
      *
-     * @param array  $payload
-     * @param string $url
+     * @param array $payload
+     * @param array $data
      *
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \Pixadelic\Adobe\Exception\ClientException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function prepareRequests(array &$payload, $data)
+    protected function prepareRequests(array &$payload, array $data)
     {
-
-        // First we need to retrieve the main resource to inspect it
-        //$data = $this->setExtended()->get($url);
 
         foreach ($payload as $key => $properties) {
             if (\strpos($key, '|')) {
@@ -656,7 +651,7 @@ abstract class AbstractBase
                 // the custom resources
             }
 
-            if (isset($data[$cusLink])) {
+            if (array_key_exists($cusLink, $data)) {
                 $newKey = $key;
 
                 // Save the PKey
@@ -667,6 +662,13 @@ abstract class AbstractBase
                 // Save the href
                 if (isset($data[$cusLink]['href'])) {
                     $newKey = "{$newKey}|{$data[$cusLink]['href']}";
+                }
+
+                // Null case
+                if ($data[$cusLink] === null) {
+                    // Negociate an href the dirty way...
+                    $href = str_replace('/metadata', '', $this->profileMetadata['content'][$cusLink]['href']);
+                    $newKey = "{$newKey}|{$href}";
                 }
 
                 // Update the key
@@ -872,7 +874,7 @@ abstract class AbstractBase
                 // Nominal case, just run main entity PATCH/POST request
                 if (1 === $count) {
                     $response = $this->doRequest($verb1, $url, \json_encode($properties));
-                    if ($verb1 !== 'POST' && isset($response['href'])) {
+                    if ('POST' !== $verb1 && isset($response['href'])) {
                         $response[] = $this->get($response['href']);
                     } else {
                         $response[] = $response;
@@ -883,7 +885,8 @@ abstract class AbstractBase
             }
 
             if (count($response)) {
-                $this->prepareRequests($payload, $response[0]);
+                // @TODO handle preparation if cusLink is null
+                $this->prepareRequests($payload, $response);
             }
 
             foreach ($payload as $key => $properties) {
@@ -935,14 +938,16 @@ abstract class AbstractBase
     {
         if (isset($this->logDir) && $this->logDir && \file_exists($this->logDir)) {
             if (!file_exists("{$this->logDir}/aec-php-sdk-counts")) {
-                mkdir("{$this->logDir}/aec-php-sdk-counts", 0777, true);
+                if (!mkdir("{$this->logDir}/aec-php-sdk-counts", 0777, true) && !is_dir("{$this->logDir}/aec-php-sdk-counts")) {
+                    throw new \RuntimeException(sprintf('Directory "%s" was not created', "{$this->logDir}/aec-php-sdk-counts"));
+                }
             }
 
             $date = date("Y-m-d");
             $logFilePath = "{$this->logDir}/aec-php-sdk-counts/{$date}";
 
             if (!\file_exists($logFilePath)) {
-                $handle = fopen($logFilePath, "x+");
+                $handle = fopen($logFilePath, 'b+');
                 \fclose($handle);
             }
 
@@ -950,7 +955,7 @@ abstract class AbstractBase
             if (!$count) {
                 $count = 1;
             } else {
-                $count += 1;
+                ++$count;
             }
             file_put_contents($logFilePath, $count);
         }
