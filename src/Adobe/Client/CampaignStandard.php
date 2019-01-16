@@ -64,8 +64,7 @@ class CampaignStandard extends AbstractBase
                         //if (!isset($customResources[$res])) {
                         if (!isset($authorizedRes[$res])) {
                             unset($profileMetadata['content'][$key]);
-                        } // Store metadata if the resource is declared
-                        else {
+                        } else { // Store metadata if the resource is declared
                             if (isset($value['resTarget'])) {
                                 $profileMetadata['content'][$key] = $this->setExtended()->getMetadata($res);
                             }

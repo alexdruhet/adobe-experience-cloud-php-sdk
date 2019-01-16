@@ -358,10 +358,10 @@ trait CommonTrait
         if ($this->enableLog && $this->logDir && \file_exists($this->logDir)) {
             $logFilePath = "{$this->logDir}/aec-php-sdk.log";
             if (!\file_exists($logFilePath)) {
-                $handle = fopen($logFilePath, "x+");
+                $handle = fopen($logFilePath, 'x+');
                 \fclose($handle);
             }
-            $handle = fopen($logFilePath, "a+");
+            $handle = fopen($logFilePath, 'a+');
             $date = date("D M d H:i:s Y");
             $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : php_sapi_name();
             $line = "[{$date}] [{$namespace}] [{$ip}] $message".\PHP_EOL;
@@ -422,7 +422,7 @@ trait CommonTrait
             if (\is_string($value)) {
                 $this->log($name.' - '.$value);
             } else {
-                $this->log($name.': '.\PHP_EOL.json_encode($value));
+                $this->log($name.' - '.\PHP_EOL.json_encode($value, JSON_PRETTY_PRINT));
             }
         }
 

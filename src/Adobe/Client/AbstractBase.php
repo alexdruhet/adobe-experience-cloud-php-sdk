@@ -164,7 +164,7 @@ abstract class AbstractBase
      */
     public function getNext(array $response)
     {
-        if (isset($response['next'], $response['next']['href'])) {
+        if (isset($response['next']['href'])) {
             return $this->get($response['next']['href']);
         }
 
@@ -351,23 +351,21 @@ abstract class AbstractBase
 
             // Try to find the property in custom resources
             foreach ($content as $key => $nestedMetadata) {
-                if (0 === strpos($key, 'cus')) {
-                    // We can potentially find the nested property metadata
-                    // since we load the linked property metadata in getMetadata
-                    if (isset($nestedMetadata['compatibleResources'])) {
-                        $compatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
-                        $resourceName = array_shift($compatibleResourcesKeys);
+                if (isset($nestedMetadata['compatibleResources'])
+                    && (0 === strpos($key, 'cus'))
+                ) {
+                    $compatibleResourcesKeys = array_keys($nestedMetadata['compatibleResources']);
+                    $resourceName = array_shift($compatibleResourcesKeys);
 
-                        // Proceed only if the property is owned by our organisation unit
-                        if (in_array($resourceName, $this->orgUnitResources)) {
-                            $subReturn = $this->validateResourceRaw($property, $value, $nestedMetadata, false);
+                    // Proceed only if the property is owned by our organisation unit
+                    if (in_array($resourceName, $this->orgUnitResources, true)) {
+                        $subReturn = $this->validateResourceRaw($property, $value, $nestedMetadata, false);
 
-                            // Break if the property is find in a nested metadata
-                            if ($subReturn) {
-                                // Mark property has valid
-                                $this->validationData[$property]['valid'] = true;
-                                break;
-                            }
+                        // Break if the property is find in a nested metadata
+                        if ($subReturn) {
+                            // Mark property has valid
+                            $this->validationData[$property]['valid'] = true;
+                            break;
                         }
                     }
                 }
@@ -512,10 +510,6 @@ abstract class AbstractBase
      *
      * @param array $payload
      * @param array $metadata
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     protected function preparePayload(array &$payload, array $metadata)
     {
@@ -548,7 +542,7 @@ abstract class AbstractBase
                         }
                     }
                 }
-            } else {
+            } elseif (isset($resourceName)) {
                 //if ($property !== 'email') {
                 unset($payload[$property]);
                 //}
@@ -557,73 +551,13 @@ abstract class AbstractBase
         }
     }
 
-
     /**
      * Prepare request
      *
      * Because some resources are potentially
      * concerned by an update and other by a create
      * we have to prepare their respective requests with:
-     * - a POST if the resource not yet exists
-     * - a PATCH + PK if it's just an update
-     *
-     * To do so we will extend the custom syntax used
-     * in preparePayload method. The following syntax
-     * will be applied to the payload keys:
-     * {resourceName}|{cusLink}|{href}
-     *
-     * @param string $url
-     * @param array  $payload
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
-     */
-    protected function prepareRequestsOLD($url, array &$payload)
-    {
-
-        // First we need to retrieve the main resource to inspect it
-        $data = $this->get($url);
-
-        foreach ($payload as $key => $properties) {
-            if (\strpos($key, '|')) {
-                list($resourceName, $cusLink) = explode('|', $key);
-            } else {
-                continue;
-                // Since the update is already required
-                // for the main resource, we only process
-                // the custom resources
-            }
-
-            if (isset($data[$cusLink])) {
-                $newKey = $key;
-
-                // Save the PKey
-                if (isset($data[$cusLink]['PKey'])) {
-                    $newKey = "{$newKey}|{$data[$cusLink]['PKey']}";
-                }
-
-                // Save the href
-                if (isset($data[$cusLink]['href'])) {
-                    $newKey = "{$newKey}|{$data[$cusLink]['href']}";
-                }
-
-                // Update the key
-                if ($newKey !== $key) {
-                    $payload[$newKey] = $payload[$key];
-                    unset($payload[$key]);
-                }
-            }
-        }
-    }
-
-    /**
-     * Prepare request
-     *
-     * Because some resources are potentially
-     * concerned by an update and other by a create
-     * we have to prepare their respective requests with:
-     * - a POST if the resource not yet exists
+     * - a POST if the resource not yet exists, require an href
      * - a PATCH + PK if it's just an update
      *
      * To do so we will extend the custom syntax used
@@ -633,17 +567,15 @@ abstract class AbstractBase
      *
      * @param array $payload
      * @param array $data
+     * @param array $metadata
      *
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \Pixadelic\Adobe\Exception\ClientException
-     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    protected function prepareRequests(array &$payload, array $data)
+    protected function prepareRequests(array &$payload, array $data, array $metadata)
     {
 
         foreach ($payload as $key => $properties) {
             if (\strpos($key, '|')) {
-                list($resourceName, $cusLink) = explode('|', $key);
+                list(, $cusLink) = explode('|', $key);
             } else {
                 continue;
                 // Since the update is already required
@@ -664,10 +596,13 @@ abstract class AbstractBase
                     $newKey = "{$newKey}|{$data[$cusLink]['href']}";
                 }
 
-                // Null case
-                if ($data[$cusLink] === null) {
-                    // Negociate an href the dirty way...
-                    $href = str_replace('/metadata', '', $this->profileMetadata['content'][$cusLink]['href']);
+                // Null case, yes it occurs...
+                if ($data[$cusLink] === null
+                    && isset($metadata['content'][$cusLink]['href'])
+                ) {
+                    // Negociate an href the dirty way,
+                    // by getting the metadata endpoint and strip the last part...
+                    $href = str_replace('/metadata', '', $metadata['content'][$cusLink]['href']);
                     $newKey = "{$newKey}|{$href}";
                 }
 
@@ -693,7 +628,7 @@ abstract class AbstractBase
         }
 
         // So we can ensure the tld exists
-        $tld = substr(strrchr($email, "@"), 1);
+        $tld = substr(strrchr($email, '@'), 1);
         if (!checkdnsrr($tld, 'MX')) {
             throw new ClientException(sprintf('The domain of the given email %s is invalid', $email), 400);
         }
@@ -885,8 +820,7 @@ abstract class AbstractBase
             }
 
             if (count($response)) {
-                // @TODO handle preparation if cusLink is null
-                $this->prepareRequests($payload, $response);
+                $this->prepareRequests($payload, $response[0], $metadata);
             }
 
             foreach ($payload as $key => $properties) {
@@ -906,9 +840,9 @@ abstract class AbstractBase
                         if (0 === $i) {
                             $cusName = $parameter;
                         }
-                        if (\preg_match('/^@/', $parameter)) {
-                            $PKey = $parameter;
-                        }
+                        //if (\preg_match('/^@/', $parameter)) {
+                        //    $PKey = $parameter;
+                        //}
                         if (\preg_match('/^https/', $parameter)) {
                             $href = $parameter;
                         }
@@ -918,8 +852,15 @@ abstract class AbstractBase
                     }
                     //if ($PKey && $href) {
                     if ($href && $email) {
-                        $response[] = $this->doRequest($verb1, $href, \json_encode($properties));
-                    } elseif (isset($properties['email'])) {
+                        try {
+                            $response[] = $this->doRequest($verb1, $href, \json_encode($properties));
+                        } catch (ClientException $clientException) {
+                            // $verb 1 fail, let's try $verb2
+                            // ACS handle relations very poorly
+                            $href = null;
+                        }
+                    }
+                    if (!$href && isset($properties['email'])) {
                         $response[] = $this->doRequest($verb2, $cusName, \json_encode($properties));
                     }
                 }
@@ -943,11 +884,11 @@ abstract class AbstractBase
                 }
             }
 
-            $date = date("Y-m-d");
+            $date = date('Y-m-d');
             $logFilePath = "{$this->logDir}/aec-php-sdk-counts/{$date}";
 
             if (!\file_exists($logFilePath)) {
-                $handle = fopen($logFilePath, 'b+');
+                $handle = fopen($logFilePath, 'w+');
                 \fclose($handle);
             }
 
