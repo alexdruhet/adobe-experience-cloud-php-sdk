@@ -152,7 +152,7 @@ class Request
                 foreach ($this->options['query'] as $name => $value) {
                     $qsa .= "{$name}={$value}&";
                 }
-                if ($qsa !== '?') {
+                if ('?' !== $qsa) {
                     $url .= trim($qsa, '&');
                 }
             }
