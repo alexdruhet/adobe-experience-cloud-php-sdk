@@ -13,7 +13,9 @@ ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 require $appRoot.'/web/utils.php';
 
-use Pixadelic\Adobe\Client\CampaignStandard;use Symfony\Component\Yaml\Yaml;
+use Pixadelic\Adobe\Api\AccessToken;
+use Pixadelic\Adobe\Client\CampaignStandard;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Load and prepare config
@@ -78,9 +80,9 @@ if (isset($config['parameters']['test_event_name'])) {
 /**
  * Getting access token test
  */
-//$accessToken = new AccessToken($config['adobe']['campaign']);
-//$accessToken->flush();
-//Utils::execute($accessToken, 'get');
+$accessToken = new AccessToken($config['adobe']['campaign']);
+$accessToken->flush();
+Utils::execute($accessToken, 'get');
 
 /**
  * CampaignStandard client example
@@ -121,9 +123,13 @@ if ($testEventName) {
  * Profiles list tests
  */
 Utils::execute($campaignClient, 'getProfiles');
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+if (isset($data[$prefix.'getProfiles']['success'])) {
+    Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+}
 Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+if (isset($data[$prefix.'getProfiles_alt']['success'])) {
+    Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+}
 
 /**
  * Profile manipulation tests
