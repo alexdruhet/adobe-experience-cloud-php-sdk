@@ -13,7 +13,9 @@ ini_set('error_log', $appRoot.'/var/log/php_error.log');
 require $appRoot.'/vendor/autoload.php';
 require $appRoot.'/web/utils.php';
 
-use Pixadelic\Adobe\Client\CampaignStandard;use Symfony\Component\Yaml\Yaml;
+use Pixadelic\Adobe\Api\AccessToken;
+use Pixadelic\Adobe\Client\CampaignStandard;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Load and prepare config
@@ -21,11 +23,14 @@ use Pixadelic\Adobe\Client\CampaignStandard;use Symfony\Component\Yaml\Yaml;
 $data = [];
 $testEmail = null;
 $testServiceName = null;
+$testService = null;
+$testProfile = null;
 $newProfileTestEmail = null;
 $campaignClient = null;
 $testEventName = null;
 $testEventPayload = [];
 $testInstagram = '@test';
+$testWorkflow = null;
 
 
 if (isset($_GET['prod'])) {
@@ -37,6 +42,9 @@ if (isset($_GET['prod'])) {
 }
 if (isset($config['adobe']['campaign']['private_key'])) {
     $config['adobe']['campaign']['private_key'] = $appRoot.'/'.$config['adobe']['campaign']['private_key'];
+}
+if (isset($config['adobe']['campaign']['reconciliation_workflow_id'])) {
+    $testWorkflow = $config['adobe']['campaign']['reconciliation_workflow_id'];
 }
 if (isset($config['parameters']['test_email'])) {
     $testEmail = $config['parameters']['test_email'];
@@ -115,24 +123,63 @@ if ($testEventName) {
  * Profiles list tests
  */
 Utils::execute($campaignClient, 'getProfiles');
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+if (isset($data[$prefix.'getProfiles']['success'])) {
+    Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles']['success']]);
+}
 Utils::execute($campaignClient, 'getProfiles', [10, 'email']);
-Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+if (isset($data[$prefix.'getProfiles_alt']['success'])) {
+    Utils::execute($campaignClient, 'getNext', [$data[$prefix.'getProfiles_alt']['success']]);
+}
 
 /**
  * Profile manipulation tests
  */
-$endEmail = end($data[$prefix.'getNext_alt']['success']['content']);
-Utils::execute($campaignClient, 'getProfileByEmail', [$endEmail]);
 Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
-if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
+if (isset($data[$prefix.'getProfileByEmail']['success'])) {
     $testProfile = $data[$prefix.'getProfileByEmail']['success']['content'][0];
 } else {
-    Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
-    $testProfile = $data[$prefix.'createProfile']['success'][0];
+    Utils::execute(
+        $campaignClient,
+        'createProfile',
+        [
+            [
+                'preferredLanguage' => 'fr_fr',
+                'email' => $testEmail,
+                'Acquisition' => 'duplication_test1',
+                'firstName' => 'Joe',
+                'AppUser' => 'android',
+                'lastName' => 'Gibbs',
+            ],
+        ]
+    );
+    if (isset($data[$prefix.'createProfile']['success'])) {
+        $testProfile = $data[$prefix.'createProfile']['success'][0];
+    }
+}
+Utils::execute($campaignClient, 'getProfileByEmail', [$testEmail]);
+if (isset($data[$prefix.'getProfileByEmail_alt']['success'])) {
+    $testProfile = $data[$prefix.'getProfileByEmail_alt']['success']['content'][0];
+} else {
+    Utils::execute(
+        $campaignClient,
+        'createProfile',
+        [
+            [
+                'email' => $testEmail,
+                'firstName' => 'Coxsone',
+                'lastName' => 'Dodd',
+                'AppUser' => 'android',
+                'Acquisition' => 'duplication_test2',
+                'preferredLanguage' => 'en_us',
+            ],
+        ]
+    );
+    if (isset($data[$prefix.'createProfile']['success'])) {
+        $testProfile = $data[$prefix.'createProfile']['success'][0];
+    }
 }
 Utils::execute($campaignClient, 'getProfileByEmail', ['test@iflya380.com']);
-if (isset($testProfile['PKey'])) {
+if ($testProfile && isset($testProfile['PKey'])) {
     Utils::execute(
         $campaignClient,
         'updateProfile',
@@ -141,7 +188,7 @@ if (isset($testProfile['PKey'])) {
             [
                 'birthDate' => '1971-06-10',
                 'preferredLanguage' => 'fr_frt',
-                'Acquisition' => 'self granted',
+                'Acquisition' => 'self granted 1',
                 'InstagramUsername' => $testInstagram,
                 'AppUser' => 'unknown',
                 'LcahMember' => false,
@@ -157,7 +204,7 @@ if (isset($testProfile['PKey'])) {
             [
                 'birthDate' => '1972-08-02',
                 'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted',
+                'Acquisition' => 'self granted 2',
                 'InstagramUsername' => $testInstagram,
                 'AppUser' => 'toto',
                 'LcahMember' => false,
@@ -170,9 +217,9 @@ if (isset($testProfile['PKey'])) {
         [
             $testProfile['PKey'],
             [
-                'birthDate' => '1976-09-10',
+                'birthDate' => '1975-10-10',
                 'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted',
+                'Acquisition' => 'self granted 3',
                 'InstagramUsername' => $testInstagram,
                 'AppUser' => 'ios',
                 'LcahMember' => 0,
@@ -185,12 +232,12 @@ if (isset($testProfile['PKey'])) {
         [
             $testProfile['PKey'],
             [
-                'birthDate' => '1976-09-10',
+                'birthDate' => '1976-11-10',
                 'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted',
+                'Acquisition' => 'self granted 4',
                 'InstagramUsername' => $testInstagram,
                 'AppUser' => 'android',
-                'LcahMember' => 0,
+                'LcahMember' => 1,
             ],
         ]
     );
@@ -200,48 +247,57 @@ if (isset($testProfile['PKey'])) {
         [
             $testProfile['PKey'],
             [
-                'birthDate' => '1976-09-10',
+                'birthDate' => '1977-09-10',
                 'preferredLanguage' => 'fr_fr',
-                'Acquisition' => 'self granted',
+                'Acquisition' => 'self granted 5',
                 'InstagramUsername' => $testInstagram,
                 'AppUser' => 'unknown',
                 'LcahMember' => 0,
             ],
         ]
     );
-}
-Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
 
-/**
- * Service tests
- */
-Utils::execute($campaignClient, 'getServices');
-$testService = null;
-foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
-    if ($service['name'] === $testServiceName) {
-        $testService = $service;
-        break;
+
+    Utils::execute($campaignClient, 'updateProfile', [$testProfile['PKey'], ['foo' => 'bar']]);
+
+    /**
+     * Service tests
+     */
+    Utils::execute($campaignClient, 'getServices');
+    $testService = null;
+    foreach ($data[$prefix.'getServices']['success']['content'] as $service) {
+        if ($service['name'] === $testServiceName) {
+            $testService = $service;
+            break;
+        }
     }
-}
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
-Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
-$testSubscription = null;
-foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
-    if ($subscription['serviceName'] === $testServiceName) {
-        $testSubscription = $subscription;
-        break;
+    if (is_array($testService)) {
+        Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+        Utils::execute($campaignClient, 'addSubscription', [$testProfile, $testService]);
+        Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$testProfile]);
+        $testSubscription = null;
+        foreach ($data[$prefix.'getSubscriptionsByProfile']['success']['content'] as $subscription) {
+            if ($subscription['serviceName'] === $testServiceName) {
+                $testSubscription = $subscription;
+                break;
+            }
+        }
+        Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
     }
+    Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
 }
-Utils::execute($campaignClient, 'deleteSubscription', [$testSubscription]);
-Utils::execute($campaignClient, 'getProfile', [$testProfile['PKey']]);
 Utils::execute($campaignClient, 'createProfile', [['foo' => 'bar']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@bar']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => 'foo@wwwwwwwwwww.xyz']]);
 Utils::execute($campaignClient, 'createProfile', [['email' => $testEmail]]);
 Utils::execute($campaignClient, 'createProfile', [['email' => $newProfileTestEmail]]);
+Utils::execute($campaignClient, 'getProfileByEmail', [$newProfileTestEmail]);
+if (isset($data[$prefix.'getProfileByEmail_alt_alt_alt']['success']['content'][0])) {
+    $newProfileTest = $data[$prefix.'getProfileByEmail_alt_alt_alt']['success']['content'][0];
+    Utils::execute($campaignClient, 'updateProfile', [$newProfileTest['PKey'], ['email' => $newProfileTestEmail, 'AppUser' => 'ios']]);
+}
 $newProfileTest = $campaignClient->getProfileByEmail($newProfileTestEmail);
-if ($newProfileTest) {
+if ($newProfileTest && $testService) {
     Utils::execute($campaignClient, 'addSubscription', [$newProfileTest['content'][0], $testService]);
     Utils::execute($campaignClient, 'getSubscriptionsByProfile', [$newProfileTest['content'][0]]);
     $newProfileSubscription = null;
@@ -254,6 +310,24 @@ if ($newProfileTest) {
     Utils::execute($campaignClient, 'deleteSubscription', [$newProfileSubscription]);
     Utils::execute($campaignClient, 'deleteProfile', [$newProfileTest['content'][0]['PKey']]);
 }
+
+/**
+ * Worflow tests
+ */
+if ($testWorkflow) {
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'pauseWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'resumeWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'stopWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+    Utils::execute($campaignClient, 'startWorkflow', [$testWorkflow]);
+    Utils::execute($campaignClient, 'getWorkflowActivity', [$testWorkflow]);
+}
+
 // @codingStandardsIgnoreEnd
 
 ?><!DOCTYPE html>

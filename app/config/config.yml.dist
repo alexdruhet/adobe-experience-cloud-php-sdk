@@ -28,6 +28,9 @@ adobe:
             enable: true # default value
             dir: ~ # default to php tmp
 
-        org_unit: ~ # the orgUnit values
-        org_unit_param: ~ # default orgUnit
-        org_unit_resources: ~ # a collection of custom resources names
+        org_unit:
+            name: ~ # the orgUnit name
+            param: ~ # the virtual orgUnit param to use for org unit reconciliation on ACS side (see reconciliation_workflow_id)
+            resources: ~ # a collection of custom resources names, /!\ an email field is required on each of your client data table.
+
+        reconciliation_workflow_id: ~ # A workflow ID to trigger after profile creation

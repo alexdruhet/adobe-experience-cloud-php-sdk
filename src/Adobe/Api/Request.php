@@ -66,7 +66,9 @@ class Request
         $response = null;
 
         try {
-            $response = $this->client->request($this->method, $this->url, $this->options);
+            $curlOpts = $this->options;
+            unset($curlOpts['debug']);
+            $response = $this->client->request($this->method, $this->url, $curlOpts);
         } catch (\Exception $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
@@ -99,7 +101,7 @@ class Request
     {
         if ($debug) {
             @fclose($this->options['debug']);
-            $this->options['debug'] = fopen('php://temp', 'r+');
+            $this->options['debug'] = fopen('php://temp', 'w+');
         }
     }
 
@@ -127,7 +129,7 @@ class Request
     protected function addDebugInfo($message)
     {
         if (isset($this->options['debug'])) {
-            fputs($this->options['debug'], "{$message}\n");
+            fwrite($this->options['debug'], "{$message}");
         }
     }
 
@@ -139,23 +141,25 @@ class Request
     protected function getRawCurlRequest()
     {
         $rawCurlRequest = '';
-        if (isset($this->options['debug'])
-            && isset($this->options['base_uri'])
-            && isset($this->options['headers'])
-        ) {
+        if (isset($this->options['debug'], $this->options['base_uri'], $this->options['headers'])) {
             $headers = '';
+            $qsa = '?';
             foreach ($this->options['headers'] as $name => $value) {
-                $headers .= "-H \"{$name}: {$value}\" \\".\PHP_EOL;
+                $headers .= " -H '{$name}: {$value}'";
             }
-            $rawCurlRequest = "RAW CURL REQUEST: ".\PHP_EOL."curl ".\PHP_EOL."-X {$this->method} {$this->options['base_uri']}{$this->url} \\".\PHP_EOL.$headers;
+            $url = 0 === strpos($this->url, $this->options['base_uri']) ? $this->url : $this->options['base_uri'].$this->url;
+            if (isset($this->options['query'])) {
+                foreach ($this->options['query'] as $name => $value) {
+                    $qsa .= "{$name}={$value}&";
+                }
+                if ('?' !== $qsa) {
+                    $url .= trim($qsa, '&');
+                }
+            }
+            $rawCurlRequest = "curl -X {$this->method} '{$url}'".$headers;
             if (isset($this->options['body'])) {
-                $rawCurlRequest .= \PHP_EOL."-i -d \"{$this->options['body']}\"";
+                $rawCurlRequest .= " -i -d '{$this->options['body']}'";
             }
-            $rawCurlRequest .= \PHP_EOL;
-            //\print_r($rawCurlRequest);
-            //echo \PHP_EOL.\PHP_EOL;
-            //echo '<br>---<br>';
-            //echo \PHP_EOL.\PHP_EOL;
             $this->addDebugInfo($rawCurlRequest);
         }
 

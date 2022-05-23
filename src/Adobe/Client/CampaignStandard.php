@@ -35,24 +35,40 @@ class CampaignStandard extends AbstractBase
     {
         if (!count($this->profileMetadata)) {
             $this->currentEndpointIndex = 0;
-            $customResources = [];
-
-            if (count($this->orgUnitResources)) {
-                foreach ($this->orgUnitResources as $orgUnitResource) {
-                    $customResources[$orgUnitResource] = $this->setExtended()->getMetadata($orgUnitResource);
-                }
-            }
+            //$customResources = [];
 
             $profileMetadata = $this->setExtended()->getMetadata($this->majorEndpoints[0]);
+
+            // We push org unit workaround field if used
+            if ($this->orgUnitParam) {
+                $this->orgUnitResources[] = $this->orgUnitParam;
+            }
+            /** @var string $orgUnitResource */
+            foreach ($this->orgUnitResources as $orgUnitResource) {
+                $authorizedRes[$orgUnitResource] = $orgUnitResource;
+            }
 
             // We restrict the profile metadata
             // to the specified custom resources
             foreach ($profileMetadata['content'] as $key => $value) {
-                if (preg_match('/^cus/', $key) && isset($value['resTarget'])) {
-                    if (!isset($customResources[$value['resTarget']])) {
-                        unset($profileMetadata['content'][$key]);
-                    } else {
-                        $profileMetadata['content'][$key] = $customResources[$value['resTarget']];
+                $res = null;
+                if (0 === strpos($key, 'cus')) {
+                    // Check client data table
+                    if (isset($value['resTarget'])) {
+                        $res = $value['resTarget'];
+                    } else { // Check custom fields
+                        $res = $key;
+                    }
+                    if ($res) {
+                        // Unset resources if not required
+                        //if (!isset($customResources[$res])) {
+                        if (!isset($authorizedRes[$res])) {
+                            unset($profileMetadata['content'][$key]);
+                        } else { // Store metadata if the resource is declared
+                            if (isset($value['resTarget'])) {
+                                $profileMetadata['content'][$key] = $this->setExtended()->getMetadata($res);
+                            }
+                        }
                     }
                 }
             }
@@ -117,10 +133,8 @@ class CampaignStandard extends AbstractBase
         if ($profile && isset($profile['content'][0])) {
             // Load custom resources data
             foreach ($profile['content'][0] as $key => $value) {
-                if (preg_match('/^cus/', $key)) {
-                    if (isset($profile['content'][0][$key]['href'])) {
-                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
-                    }
+                if (isset($profile['content'][0][$key]['href']) && 0 === strpos($key, 'cus')) {
+                    $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
                 }
             }
         }
@@ -144,15 +158,16 @@ class CampaignStandard extends AbstractBase
 
         $this->currentEndpointIndex = 0;
 
-        $profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
+        // Since the org unit is buggy and reconciliated afterwards,
+        // we need to check the profile existence without it.
+        //$profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email, $this->orgUnitParam => $this->orgUnit]);
+        $profile = $this->setExtended()->get("{$this->majorEndpoints[0]}/byEmail", ['email' => $email]);
 
         if ($profile && isset($profile['content'][0])) {
             // Load custom resources data
             foreach ($profile['content'][0] as $key => $value) {
-                if (preg_match('/^cus/', $key)) {
-                    if (isset($profile['content'][0][$key]['href'])) {
-                        $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
-                    }
+                if (isset($profile['content'][0][$key]['href']) && 0 === strpos($key, 'cus')) {
+                    $profile['content'][0][$key] = $this->get($profile['content'][0][$key]['href']);
                 }
             }
         } elseif ($throwException) {
@@ -192,7 +207,19 @@ class CampaignStandard extends AbstractBase
         // If ok we proceed with the extended API
         $this->currentEndpointIndex = 0;
 
-        return $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
+        $response = $this->setExtended()->post($this->majorEndpoints[0], $payload, $this->getProfileMetadata());
+        if ($response && $this->reconciliationWorkflowID) {
+            $workflowActivity = $this->getWorkflowActivity($this->reconciliationWorkflowID);
+            $state = $workflowActivity['state'];
+            if ('stopped' === $state) {
+                $this->startWorkflow($this->reconciliationWorkflowID);
+            }
+            //else {
+            // @TODO: add task to an hypothetical queue in order to be batch processed
+            //}
+        }
+
+        return $response;
     }
 
     /**
@@ -214,7 +241,7 @@ class CampaignStandard extends AbstractBase
 
         if (!isset($payload['email'])) {
             $profile = $this->getProfile($pKey);
-            $payload['email'] =  $profile['email'];
+            $payload['email'] = $profile['email'];
         }
 
         $this->currentEndpointIndex = 0;
@@ -359,7 +386,7 @@ class CampaignStandard extends AbstractBase
         $this->validateEventResources($eventId, $payload);
         $this->currentEndpointIndex = 2;
 
-        return $this->post($eventId, $payload);
+        return $this->unsetExtended()->post($eventId, $payload);
     }
 
     /**
@@ -376,7 +403,7 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 2;
 
-        return $this->get("{$eventId}/{$eventPKey}");
+        return $this->unsetExtended()->get("{$eventId}/{$eventPKey}");
     }
 
     /**
@@ -392,7 +419,7 @@ class CampaignStandard extends AbstractBase
     {
         $this->currentEndpointIndex = 2;
 
-        return $this->getMetadata($eventId);
+        return $this->unsetExtended()->getMetadata($eventId);
     }
 
     /**
@@ -405,7 +432,7 @@ class CampaignStandard extends AbstractBase
      */
     public function validateEventResources($eventId, array $payload)
     {
-        $metadata = $this->getEventMetadata($eventId);
+        $metadata = $this->unsetExtended()->getEventMetadata($eventId);
         if (!isset($metadata['content']['ctx'])) {
             throw new ClientException(sprintf('Invalid $eventId submitted: %s', $eventId), 400);
         }
@@ -483,7 +510,9 @@ class CampaignStandard extends AbstractBase
      */
     public function getWorkflowActivity($id)
     {
-        return $this->get("workflow/execution/{$id}");
+        $this->currentEndpointIndex = 3;
+
+        return $this->unsetExtended()->get($id);
     }
 
 //    /**
@@ -532,9 +561,9 @@ class CampaignStandard extends AbstractBase
             throw new ClientException(sprintf('Invalid command submitted: %s', $command), 400);
         }
 
-        $this->currentEndpointIndex = 0;
+        $this->currentEndpointIndex = 3;
 
-        return $this->post("workflow/execution/{$id}/commands", ['method' => $command]);
+        return $this->unsetExtended()->post("{$id}/commands", ['method' => $command]);
     }
 
     /**
@@ -542,7 +571,7 @@ class CampaignStandard extends AbstractBase
      */
     protected function setEndpoints()
     {
-        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool', "campaign/mc{$this->tenantBase}"];
+        $this->endpoints = ['campaign/profileAndServices', 'campaign/privacy/privacyTool', "campaign/mc{$this->tenantBase}", 'campaign/workflow/execution'];
     }
 
     /**

@@ -130,6 +130,13 @@ trait CommonTrait
     protected $expiration = 3600 * 24;
 
     /**
+     * A workflow ID to trigger after any profile creation
+     *
+     * @var string
+     */
+    protected $reconciliationWorkflowID;
+
+    /**
      * @var bool
      */
     protected $enableCache = true;
@@ -301,14 +308,17 @@ trait CommonTrait
             $this->accessEndpoint = $config['access_endpoint'];
             $this->exchangeEndpoint = $config['exchange_endpoint'];
             $this->audience = $config['audience'];
-            $this->orgUnit = $config['org_unit'];
+            $this->orgUnit = $config['org_unit']['name'];
 
             // Optional parameters
-            if (isset($config['org_unit_param'])) {
-                $this->orgUnitParam = $config['org_unit_param'];
+            if (isset($config['reconciliation_workflow_id'])) {
+                $this->reconciliationWorkflowID = $config['reconciliation_workflow_id'];
             }
-            if (isset($config['org_unit_resources'])) {
-                $this->orgUnitResources = $config['org_unit_resources'];
+            if (isset($config['org_unit']['param'])) {
+                $this->orgUnitParam = $config['org_unit']['param'];
+            }
+            if (isset($config['org_unit']['resources'])) {
+                $this->orgUnitResources = $config['org_unit']['resources'];
             }
             if (isset($config['expiration'])) {
                 $this->expiration = (int) $config['expiration'];
@@ -368,10 +378,10 @@ trait CommonTrait
         if ($this->enableLog && $this->logDir && \file_exists($this->logDir)) {
             $logFilePath = "{$this->logDir}/aec-php-sdk.log";
             if (!\file_exists($logFilePath)) {
-                $handle = fopen($logFilePath, "x+");
+                $handle = fopen($logFilePath, 'x+');
                 \fclose($handle);
             }
-            $handle = fopen($logFilePath, "a+");
+            $handle = fopen($logFilePath, 'a+');
             $date = date("D M d H:i:s Y");
             $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : php_sapi_name();
             $line = "[{$date}] [{$namespace}] [{$ip}] $message".\PHP_EOL;
@@ -432,7 +442,7 @@ trait CommonTrait
             if (\is_string($value)) {
                 $this->log($name.' - '.$value);
             } else {
-                $this->log($name.': '.\PHP_EOL.json_encode($value));
+                $this->log($name.' - '.\PHP_EOL.json_encode($value, JSON_PRETTY_PRINT));
             }
         }
 
